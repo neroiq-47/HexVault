@@ -11,6 +11,8 @@ import { createDesk } from './desk.js';
 import { equity } from './paper.js';
 import { loadState, saveState } from './store.js';
 import { log } from './log.js';
+import { verifyDonation } from './donations.js';
+import { DONATION_MIN_SOL, DONATION_MAX_SOL } from './config.js';
 
 const SITE = readFileSync(new URL('../public/index.html', import.meta.url));
 
@@ -19,6 +21,8 @@ export function publicState(desk, config, wallet) {
   return {
     mode: desk.state.mode, armed: config.mode === 'live', cluster: config.cluster, riskLevel: config.riskLevel,
     agentWallet: wallet ? wallet.keypair.publicKey.toBase58() : null,
+    donations: { enabled: Boolean(config.donations && wallet), minSol: DONATION_MIN_SOL, maxSol: DONATION_MAX_SOL,
+      totalSol: desk.state.deposits.reduce((a, d) => a + d.sol, 0), recent: desk.state.deposits.slice(-10) },
     profitAddress: config.profitAddress,
     brain: config.anthropicKey ? 'claude' : 'rules',
     market, lastRound, lastError, walletValueSol: desk.state.wallet, floatSol: config.floatSol || null,
@@ -51,6 +55,18 @@ export function createServer({ desk, config, wallet, persist }) {
         if (req.url === '/api/kill') { const r = await desk.kill(Date.now(), 'manual'); await persist(); log('warn', 'kill switch used', { fills: r.fills.length }); return send(200, r); }
         desk.resume(); await persist(); return send(200, { halted: false });
       }
+      if (req.url === '/api/blockhash' || req.url === '/api/donation') {
+        if (!config.donations || !wallet) return send(404, { error: 'Donations are off' });
+        if (req.method === 'GET' && req.url === '/api/blockhash') return send(200, await wallet.connection.getLatestBlockhash('confirmed'));
+        if (req.method === 'POST') {
+          const { signature } = await readJson(req);
+          const r = await verifyDonation(wallet.connection, signature, wallet.keypair.publicKey.toBase58());
+          if (r.status === 'pending') return send(202, { status: 'pending' });
+          if (r.status !== 'ok') return send(400, { error: r.error });
+          if (desk.addDeposit(r.deposit)) await persist();
+          return send(200, { status: 'ok', deposit: r.deposit });
+        }
+      }
       if (req.method === 'POST' && req.url === '/api/live') {
         if (!authorised(req, config.adminSecret)) return send(401, { error: 'Wrong admin secret' });
         const { on } = await readJson(req);
@@ -80,7 +96,8 @@ async function main() {
   const mode = armed ? (saved?.liveOn ? 'live' : 'shadow') : config.mode;
   const desk = createDesk({ config, fetchMarket, brain, wallet, executors, mode, log });
   if (saved?.book) desk.state.book = saved.book;
-  const persist = () => saveState(config.dataPath, { book: desk.state.book, liveOn: desk.state.mode === 'live' });
+  if (saved?.deposits) desk.state.deposits = saved.deposits;
+  const persist = () => saveState(config.dataPath, { book: desk.state.book, liveOn: desk.state.mode === 'live', deposits: desk.state.deposits });
 
   const server = createServer({ desk, config, wallet, persist });
   server.listen(config.port, () => log('info', 'listening', { port: config.port, mode, armed, cluster: config.cluster, wallet: wallet ? keypair.publicKey.toBase58() : null, brain: brain ? 'claude' : 'rules' }));

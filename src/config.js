@@ -2,6 +2,7 @@
 export const ALLOWED_DESTINATIONS = Object.freeze(['5qmsMSPXoTWDfsEDLoo15ywoPLSiKB7zqRGR9dSVfQTA']);
 const CLUSTERS = { devnet: 'https://api.devnet.solana.com', testnet: 'https://api.testnet.solana.com', 'mainnet-beta': 'https://api.mainnet-beta.solana.com' };
 export const MODES = Object.freeze(['paper', 'shadow', 'live']);
+export const DONATION_MIN_SOL = 0.5, DONATION_MAX_SOL = 10;
 
 export function loadConfig(env = process.env) {
   const mode = (env.TRADING_MODE || 'paper').trim();
@@ -25,6 +26,7 @@ export function loadConfig(env = process.env) {
   return {
     mode, cluster, rpcUrl, profitAddress, riskLevel, floatSol, jupiterKey, agentWalletSecret,
     adminSecret: env.ADMIN_SECRET || '',
+    donations: (env.DONATIONS || 'off').trim() === 'on',
     anthropicKey: env.ANTHROPIC_API_KEY || '',
     agentModel: env.AGENT_MODEL || 'claude-haiku-5-5',
     roundSeconds: Math.max(60, Number(env.ROUND_SECONDS) || 300),
