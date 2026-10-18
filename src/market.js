@@ -21,7 +21,7 @@ export function parsePairs(pairs) {
     if (!(price > 0)) continue;
     if (best[mint] && best[mint].liq >= liq) continue;
     best[mint] = {
-      mint, sym: WATCHLIST[mint], price, liq,
+      mint, sym: WATCHLIST[mint], pool: p.pairAddress, price, liq,
       m5: p.priceChange?.m5 || 0, h1: p.priceChange?.h1 || 0, h6: p.priceChange?.h6 || 0, h24: p.priceChange?.h24 || 0,
       vol: p.volume?.h24 || 0, b1: p.txns?.h1?.buys || 0, s1: p.txns?.h1?.sells || 0,
     };

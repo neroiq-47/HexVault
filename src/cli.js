@@ -1,6 +1,7 @@
 import { loadConfig } from './config.js';
 import { newKeypair, loadKeypair, connect, airdrop, balanceSol } from './wallet.js';
-import { fetchMarket } from './market.js';
+import { fetchMarket as fetchDex } from './market.js';
+import { makeSignalSource } from './methods.js';
 import { makeBrain } from './agents.js';
 import { createDesk } from './desk.js';
 
@@ -18,6 +19,8 @@ if (cmd === 'wallet-new') {
   console.log('balance', await balanceSol(conn, kp.publicKey.toBase58()), 'SOL on', config.cluster);
 } else if (cmd === 'round') {
   const config = loadConfig();
+  const attachSignals = makeSignalSource();
+  const fetchMarket = async () => attachSignals(await fetchDex());
   const desk = createDesk({ config, fetchMarket, brain: makeBrain({ apiKey: config.anthropicKey, model: config.agentModel, backups: config.backups }), wallet: null, log: (...a) => console.log(...a) });
   const s = await desk.cycle();
   console.log(JSON.stringify(s.lastRound ?? s.lastError, null, 2));
