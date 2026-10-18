@@ -65,6 +65,24 @@ td{padding:6px 8px;border-bottom:1px solid var(--line);font-family:var(--f-mono)
 .qr{background:#fff;border-radius:10px;padding:8px;width:156px;height:156px;display:grid;place-items:center}
 .qr svg,.qr img{width:140px;height:140px}
 .fine{font-size:12px;color:var(--muted);margin-top:10px;max-width:70ch}
+.hero{padding:4px 2px 0;max-width:72ch}
+.hero .lead{font-family:var(--f-display);font-size:20px;color:var(--fg);margin:0 0 10px}
+.hero p{margin:0;color:var(--muted);font-size:15px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+@media (max-width:860px){.cards{grid-template-columns:minmax(0,1fr)}}
+.card{background:linear-gradient(160deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-top:1px solid var(--gold-line);border-radius:14px;padding:16px 18px}
+.card p,.card ul{margin:10px 0 0;color:var(--muted)}
+.card ul{padding-left:18px}
+.card li{margin-top:4px}
+.crew b{color:var(--gold-hi)}
+.fineprint p{margin:8px 0 0;color:var(--muted);max-width:80ch}
+a{color:var(--gold-hi)}
+details.owner summary{cursor:pointer;list-style:none}
+details.owner summary::-webkit-details-marker{display:none}
+details.owner summary h2{display:inline}
+details.owner summary::after{content:' +';color:var(--gold)}
+details.owner[open] summary::after{content:' \2212'}
+details.owner .livebox{margin-top:14px}
 dialog{background:var(--panel-2);color:var(--fg);border:1px solid var(--gold);border-radius:14px;max-width:440px;width:calc(100% - 32px);padding:20px}
 dialog::backdrop{background:rgba(4,2,8,.75)}
 dialog h3{font-family:var(--f-display);font-size:16px;margin:0 0 8px;color:var(--gold-hi)}
@@ -76,36 +94,55 @@ label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
 <main>
   <header>
     <div>
-      <span class="eyebrow">Solana · four-agent trading vault</span>
+      <span class="eyebrow">Solana · four AI agents · one vault</span>
       <h1>HexVault</h1>
     </div>
     <span class="pill" id="modePill"><span class="dot"></span><span id="modeText">Connecting…</span></span>
   </header>
 
-  <section class="panel livebox" aria-labelledby="liveTitle">
-    <div>
-      <h2 id="liveTitle">Live trading</h2>
-      <p id="liveDesc">Loading the bot's state…</p>
-      <div class="msg" id="liveMsg" role="status" aria-live="polite"></div>
-    </div>
-    <button class="switch" id="liveSwitch" role="switch" aria-checked="false" aria-labelledby="liveTitle" disabled>
-      <span class="lbl on">ON</span><span class="lbl off">OFF</span><span class="knob"></span>
-    </button>
+  <section class="hero" aria-label="About HexVault">
+    <p class="lead">Four AI agents. One Solana wallet. Every call out in the open.</p>
+    <p>HexVault is memefi with a seatbelt. A crew of four AI agents watches Solana's busiest tokens, from blue chips like SOL and JUP to the memes like BONK and WIF, and argues about what to do next. You get a front-row seat to every call they make.</p>
   </section>
 
-  <section class="stats" aria-label="Headline numbers">
-    <div class="stat"><div class="k">Equity</div><div class="v gold" id="sEquity">-</div></div>
-    <div class="stat"><div class="k">P&amp;L vs start</div><div class="v" id="sPnl">-</div></div>
-    <div class="stat"><div class="k">Wallet value</div><div class="v" id="sWallet">-</div></div>
-    <div class="stat"><div class="k">Float</div><div class="v" id="sFloat">-</div></div>
-    <div class="stat"><div class="k">Rounds</div><div class="v" id="sRounds">-</div></div>
+  <section class="cards" aria-label="What HexVault is">
+    <article class="card">
+      <h2>So what's memefi?</h2>
+      <p>Memes plus DeFi. Coins that run on hype and vibes, traded on real on-chain markets. It's fast, loud and a little unhinged. HexVault keeps the fun part and adds guardrails.</p>
+    </article>
+    <article class="card">
+      <h2>What it actually does</h2>
+      <ul>
+        <li>Live prices and liquidity straight from Solana DEXs</li>
+        <li>Four agents scout, analyse, risk-check and trade</li>
+        <li>Hard limits in code that no agent can talk its way past</li>
+        <li>Swaps routed through Jupiter for the best price</li>
+        <li>Profit swept to one locked address, never anywhere else</li>
+      </ul>
+    </article>
+    <article class="card">
+      <h2>Meet the crew</h2>
+      <ul class="crew">
+        <li><b>Scout</b> sniffs out momentum and buy pressure</li>
+        <li><b>Analyst</b> turns hunches into buy, sell or hold</li>
+        <li><b>Risk Manager</b> says no a lot, on purpose</li>
+        <li><b>Trader</b> places the order and reports back</li>
+      </ul>
+    </article>
+  </section>
+
+  <section class="stats" aria-label="Live numbers">
+    <div class="stat"><div class="k">Agent wallet</div><div class="v gold" id="sWallet">-</div></div>
+    <div class="stat"><div class="k">Live P&amp;L</div><div class="v" id="sPnl">-</div></div>
+    <div class="stat"><div class="k">Donated</div><div class="v" id="sDonated">-</div></div>
+    <div class="stat"><div class="k">Rounds run</div><div class="v" id="sRounds">-</div></div>
   </section>
 
   <section class="panel" id="donatePanel" hidden aria-labelledby="donateTitle">
     <div class="donate">
       <div>
         <h2 id="donateTitle">Support the agent team</h2>
-        <p class="muted" style="margin:6px 0 0">Send a donation of <span id="dRange">0.5 to 10</span> SOL to the agent wallet. Donated SOL is traded by the agents.</p>
+        <p class="muted" style="margin:6px 0 0">Like what the crew is doing? Chip in <span id="dRange">0.5 to 10</span> SOL. It goes straight to the agent wallet and the agents trade with it.</p>
         <div class="amounts" role="group" aria-label="Quick amounts">
           <button type="button" data-sol="0.5">0.5 SOL</button><button type="button" data-sol="1" class="sel">1 SOL</button><button type="button" data-sol="5">5 SOL</button><button type="button" data-sol="10">10 SOL</button>
         </div>
@@ -116,7 +153,7 @@ label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
           <a id="dLink" href="#"><button type="button" tabindex="-1">Open in a wallet app</button></a>
         </div>
         <div class="msg" id="donateMsg" role="status" aria-live="polite"></div>
-        <p class="fine"><b>This is a donation, not an investment.</b> It buys no share, return, profit or refund, and trading can lose it. Donations sent by QR code or a wallet app reach the agent wallet but are not shown in the total.</p>
+        <p class="fine"><b>This is a donation, not an investment.</b> It buys no share, return, profit or refund, and the agents can lose it. Donations sent by QR code or a wallet app reach the agent wallet but are not shown in the total.</p>
         <p class="muted" style="margin:8px 0 0">Donated so far: <span id="dTotal" class="addr">0 SOL</span></p>
       </div>
       <div><div class="qr" id="dQr" aria-label="QR code for the donation"></div><p class="fine" style="text-align:center">Scan with Phantom or Solflare</p></div>
@@ -126,33 +163,57 @@ label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
   <div class="grid">
     <section class="panel">
       <h2>Agent room</h2>
-      <div id="agents" class="muted" style="margin-top:10px">No round yet.</div>
+      <p class="muted" id="agentsNote" style="margin:6px 0 0"></p>
+      <div id="agents" class="muted" style="margin-top:10px">Waiting for the first round.</div>
     </section>
     <section class="panel">
-      <h2>Positions</h2>
-      <div class="scroll"><table><thead><tr><th>Token</th><th>Amount</th><th>Value</th><th>Unrealised</th></tr></thead><tbody id="pos"></tbody></table></div>
-      <h2 style="margin-top:18px">Wallets</h2>
-      <p class="muted" style="margin:8px 0 4px">Agent wallet</p><div class="addr" id="agentAddr">-</div>
-      <p class="muted" style="margin:10px 0 4px">Profit goes only to</p><div class="addr" id="profitAddr">-</div>
+      <h2>Market right now</h2>
+      <p class="muted" style="margin:6px 0 0">Live from Solana DEXs via DexScreener.</p>
+      <div class="scroll"><table><thead><tr><th>Token</th><th>Price</th><th>1h</th><th>24h</th><th>Liquidity</th></tr></thead><tbody id="market"></tbody></table></div>
     </section>
   </div>
 
   <div class="grid">
     <section class="panel">
-      <h2>Trades</h2>
-      <div class="scroll"><table><thead><tr><th>Time</th><th>Side</th><th>Token</th><th>USD</th><th>Mode</th></tr></thead><tbody id="trades"></tbody></table></div>
+      <h2>Live trades</h2>
+      <div class="scroll"><table><thead><tr><th>Time</th><th>Side</th><th>Token</th><th>USD</th><th>Tx</th></tr></thead><tbody id="trades"></tbody></table></div>
+      <h2 style="margin-top:18px">Open positions</h2>
+      <div class="scroll"><table><thead><tr><th>Token</th><th>Amount</th><th>Value</th><th>Unrealised</th></tr></thead><tbody id="pos"></tbody></table></div>
     </section>
     <section class="panel">
-      <h2>Profit sweeps</h2>
-      <div class="scroll"><table><thead><tr><th>Time</th><th>SOL</th><th>Status</th></tr></thead><tbody id="sweeps"></tbody></table></div>
-      <h2 style="margin-top:18px">Safety</h2>
-      <div class="row">
-        <button class="danger" id="btnKill" type="button">Kill switch: close all and stop</button>
-        <button id="btnResume" type="button">Resume trading</button>
-      </div>
-      <div class="msg" id="safeMsg" role="status" aria-live="polite"></div>
+      <h2>Wallets</h2>
+      <p class="muted" style="margin:8px 0 4px">Agent wallet</p><div class="addr" id="agentAddr">-</div>
+      <p class="muted" style="margin:10px 0 4px">Profit goes only to</p><div class="addr" id="profitAddr">-</div>
+      <h2 style="margin-top:18px">Profit sent</h2>
+      <div class="scroll"><table><thead><tr><th>Time</th><th>SOL</th><th>Tx</th></tr></thead><tbody id="sweeps"></tbody></table></div>
     </section>
   </div>
+
+  <section class="panel fineprint" aria-labelledby="fineTitle">
+    <h2 id="fineTitle">The fine print, but friendly</h2>
+    <p>This is an experiment, not a fund. Nobody here is selling you anything, there's no token, and nothing on this page is financial advice. Crypto moves fast and these agents can lose money just as easily as make it. If you donate, treat it like tipping a street performer: no shares, no returns, no refunds.</p>
+  </section>
+
+  <details class="panel owner">
+    <summary><h2>Owner controls</h2></summary>
+    <section class="livebox" aria-labelledby="liveTitle">
+    <div>
+      <h2 id="liveTitle">Live trading</h2>
+      <p id="liveDesc">Loading the bot's state…</p>
+      <div class="msg" id="liveMsg" role="status" aria-live="polite"></div>
+    </div>
+    <button class="switch" id="liveSwitch" role="switch" aria-checked="false" aria-labelledby="liveTitle" disabled>
+      <span class="lbl on">ON</span><span class="lbl off">OFF</span><span class="knob"></span>
+    </button>
+    </section>
+
+    <h2 style="margin-top:18px">Safety</h2>
+    <div class="row">
+      <button class="danger" id="btnKill" type="button">Kill switch: close all and stop</button>
+      <button id="btnResume" type="button">Resume trading</button>
+    </div>
+    <div class="msg" id="safeMsg" role="status" aria-live="polite"></div>
+  </details>
 </main>
 
 <dialog id="dlg">
@@ -183,52 +244,64 @@ async function load() {
   } catch (e) { $('modeText').textContent = 'Bot unreachable'; }
 }
 
+const sol = n => n == null ? '-' : `${n.toFixed(n >= 100 ? 1 : 3)} SOL`;
+const pct = n => n == null ? '-' : `<span class="${n >= 0 ? 'up' : 'down'}">${n >= 0 ? '+' : ''}${n.toFixed(2)}%</span>`;
+const compact = n => n == null ? '-' : '$' + Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+const txLink = sig => sig ? `<a href="https://solscan.io/tx/${esc(sig)}" target="_blank" rel="noopener">view</a>` : '-';
+
+// Only real numbers reach the page: on-chain wallet value, live trades, sent profit and verified donations.
+// Practice (shadow) fills stay in the bot and are never shown as results.
 function render() {
   const s = state, b = s.book || {}, live = s.mode === 'live';
   const pill = $('modePill');
   pill.className = 'pill' + (b.halted ? ' halted' : live ? ' live' : '');
-  $('modeText').textContent = b.halted ? 'Halted' : live ? 'LIVE · real SOL' : s.mode === 'shadow' ? 'Shadow · real prices, nothing sent' : 'Paper';
+  $('modeText').textContent = b.halted ? 'Paused' : live ? 'Live · trading real SOL' : 'Practice mode · watching, not trading';
   const sw = $('liveSwitch');
   sw.setAttribute('aria-checked', String(live));
   sw.disabled = !s.armed && !live;
   $('liveDesc').textContent = live
-    ? `Live. The agents sign real Jupiter swaps from the agent wallet. Switch off to sell every position back to SOL and return to shadow mode.`
+    ? 'Live. The agents sign real Jupiter swaps from the agent wallet. Switch off to sell every position back to SOL and return to practice mode.'
     : s.armed
-      ? `Off. The bot is in shadow mode with real prices and nothing sent. Switch on to trade real SOL from the agent wallet (float ${s.floatSol} SOL).`
+      ? `Off. The bot is in practice mode with real prices and nothing sent. Switch on to trade real SOL from the agent wallet (float ${s.floatSol} SOL).`
       : `Locked. The bot is in ${s.mode} mode. Set TRADING_MODE=live in Railway to arm this switch.`;
 
-  $('sEquity').textContent = usd(b.equity);
-  const pnl = b.equity != null && b.startUsd ? b.equity - b.startUsd : null;
-  $('sPnl').textContent = pnl == null ? '-' : (pnl >= 0 ? '+' : '') + usd(pnl);
-  $('sPnl').className = 'v ' + (pnl > 0 ? 'up' : pnl < 0 ? 'down' : '');
-  $('sWallet').textContent = s.walletValueSol ? s.walletValueSol.total.toFixed(4) + ' SOL' : '-';
-  $('sFloat').textContent = s.floatSol ? s.floatSol + ' SOL' : usd(b.startUsd);
+  $('sWallet').textContent = s.walletValueSol ? sol(s.walletValueSol.total) : '-';
+  const base = (s.floatSol || 0) + (s.donations?.totalSol || 0);
+  const pnl = live && s.walletValueSol ? s.walletValueSol.total - base : null;
+  $('sPnl').innerHTML = pnl == null ? '<span class="muted" style="font-size:14px">Starts when live</span>' : `<span class="${pnl >= 0 ? 'up' : 'down'}">${pnl >= 0 ? '+' : ''}${pnl.toFixed(4)} SOL</span>`;
+  $('sDonated').textContent = s.donations ? sol(s.donations.totalSol) : '-';
   $('sRounds').textContent = b.rounds ?? '-';
-  $('agentAddr').textContent = s.agentWallet || 'none set';
+  $('agentAddr').innerHTML = s.agentWallet ? `<a href="https://solscan.io/account/${esc(s.agentWallet)}" target="_blank" rel="noopener">${esc(s.agentWallet)}</a>` : 'none set';
   $('profitAddr').textContent = s.profitAddress;
   renderDonations();
 
+  const toks = s.market?.tokens || [];
+  $('market').innerHTML = toks.length ? toks.map(x => `<tr><td>${esc(x.sym)}</td><td>$${x.price < 0.01 ? x.price.toPrecision(3) : x.price.toLocaleString(undefined, { maximumFractionDigits: 4 })}</td><td>${pct(x.h1)}</td><td>${pct(x.h24)}</td><td>${compact(x.liq)}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Prices are loading.</td></tr>';
+
   const r = s.lastRound;
+  $('agentsNote').textContent = live ? "The crew's latest round. These calls are executed on chain." : "The crew's latest round on live prices. Practice mode, so nothing was actually bought or sold.";
   if (r) {
-    const scout = (r.scout?.candidates || []).map(c => `${c.token}: ${c.reason}`).join('; ') || 'No candidates.';
+    const scout = (r.scout?.candidates || []).map(c => `${c.token}: ${c.reason}`).join('; ') || 'Nothing caught my eye.';
     const an = (r.analyst?.proposals || []).map(p => `${p.action} ${p.token}${p.reason ? ` (${p.reason})` : ''}`).join('; ') || 'Hold.';
     const risk = (r.risk?.notes || []).join('; ') || 'No changes.';
+    const trader = live ? r.trader?.note : (r.trader?.fills?.length ? `Would have placed ${r.trader.fills.length} order(s). Not sent: practice mode.` : 'No orders this round.');
     $('agents').className = '';
-    $('agents').innerHTML = [['Scout', scout, r.scout?.via], ['Analyst', an, r.analyst?.via], ['Risk Manager', risk, r.risk?.via], ['Trader', r.trader?.note, null]]
-      .map(([n, m, via]) => `<div class="agent"><b>${n}</b>${via ? ` <span class="muted">· ${esc(via)}</span>` : ''}<div>${esc(m)}</div></div>`).join('')
+    $('agents').innerHTML = [['Scout', scout], ['Analyst', an], ['Risk Manager', risk], ['Trader', trader]]
+      .map(([n, m]) => `<div class="agent"><b>${n}</b><div>${esc(m)}</div></div>`).join('')
       + `<p class="muted" style="margin:10px 0 0">Last round ${t(r.at)}</p>`;
   }
 
-  const pos = Object.entries(b.pos || {});
+  const pos = live ? Object.entries(b.pos || {}) : [];
   $('pos').innerHTML = pos.length ? pos.map(([sym, p]) => { const v = p.qty * price(sym), u = v - p.cost;
     return `<tr><td>${esc(sym)}</td><td>${p.qty.toFixed(4)}</td><td>${usd(v)}</td><td class="${u >= 0 ? 'up' : 'down'}">${usd(u)}</td></tr>`; }).join('')
-    : `<tr><td colspan="4" class="muted">No open positions. Cash ${usd(b.cash)}.</td></tr>`;
-  const tr = (b.trades || []).slice(-15).reverse();
-  $('trades').innerHTML = tr.length ? tr.map(x => `<tr><td>${t(x.ts)}</td><td class="${x.side === 'buy' ? 'up' : 'down'}">${x.side}</td><td>${esc(x.sym)}</td><td>${usd(x.usd)}</td><td>${esc(x.mode || s.mode)}</td></tr>`).join('')
-    : `<tr><td colspan="5" class="muted">No trades yet.</td></tr>`;
-  const sw2 = (b.sweeps || []).slice(-10).reverse();
-  $('sweeps').innerHTML = sw2.length ? sw2.map(x => `<tr><td>${t(x.ts)}</td><td>${x.sol.toFixed(4)}</td><td>${esc(x.status)}</td></tr>`).join('')
-    : `<tr><td colspan="3" class="muted">No profit swept yet.</td></tr>`;
+    : `<tr><td colspan="4" class="muted">${live ? 'All in SOL right now.' : 'None. The crew is in practice mode.'}</td></tr>`;
+  const tr = (b.trades || []).filter(x => x.mode === 'live' && x.signature).slice(-15).reverse();
+  $('trades').innerHTML = tr.length ? tr.map(x => `<tr><td>${t(x.ts)}</td><td class="${x.side === 'buy' ? 'up' : 'down'}">${x.side}</td><td>${esc(x.sym)}</td><td>${usd(x.usd)}</td><td>${txLink(x.signature)}</td></tr>`).join('')
+    : `<tr><td colspan="5" class="muted">No live trades yet.</td></tr>`;
+  const sw2 = (b.sweeps || []).filter(x => x.status === 'sent' && x.signature).slice(-10).reverse();
+  $('sweeps').innerHTML = sw2.length ? sw2.map(x => `<tr><td>${t(x.ts)}</td><td>${x.sol.toFixed(4)}</td><td>${txLink(x.signature)}</td></tr>`).join('')
+    : `<tr><td colspan="3" class="muted">Nothing sent yet.</td></tr>`;
 }
 
 async function post(path, body) {

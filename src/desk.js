@@ -24,7 +24,11 @@ export function createDesk({ config, fetchMarket, brain, wallet, executor, execu
     state.market = await fetchMarket();
     const solPx = priceOf(state.market, 'SOL');
     if (!state.book) state.book = newBook(state.mode === 'paper' ? config.startUsd : config.floatSol * solPx, solPx);
-    if (isLive()) state.wallet = await walletValueSol(wallet.connection, wallet.keypair.publicKey.toBase58(), state.market);
+    // The real on-chain balance, shown on the site in every mode except paper.
+    if (wallet && state.mode !== 'paper') {
+      const read = walletValueSol(wallet.connection, wallet.keypair.publicKey.toBase58(), state.market);
+      state.wallet = isLive() ? await read : await read.catch(() => state.wallet); // a failed read only matters when live
+    }
     return state.market;
   }
 
