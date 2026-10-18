@@ -4,6 +4,7 @@ import { timingSafeEqual } from 'node:crypto';
 import { loadConfig } from './config.js';
 import { fetchMarket } from './market.js';
 import { makeBrain } from './agents.js';
+import { makeSignalSource } from './methods.js';
 import { loadKeypair, connect } from './wallet.js';
 import { createJupiter } from './jupiter.js';
 import { createExecutor } from './live.js';
@@ -94,7 +95,9 @@ async function main() {
     if (armed) executors.live = createExecutor({ mode: 'live', jupiter, connection: wallet.connection, keypair, log });
   }
   const mode = armed ? (saved?.liveOn ? 'live' : 'shadow') : config.mode;
-  const desk = createDesk({ config, fetchMarket, brain, wallet, executors, mode, log });
+  const attachSignals = makeSignalSource();
+  const marketWithSignals = async () => attachSignals(await fetchMarket());
+  const desk = createDesk({ config, fetchMarket: marketWithSignals, brain, wallet, executors, mode, log });
   if (saved?.book) desk.state.book = saved.book;
   if (saved?.deposits) desk.state.deposits = saved.deposits;
   const persist = () => saveState(config.dataPath, { book: desk.state.book, liveOn: desk.state.mode === 'live', deposits: desk.state.deposits });

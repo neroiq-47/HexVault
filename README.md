@@ -16,6 +16,7 @@ DexScreener prices ─▶ Scout ─▶ Analyst ─▶ Risk Manager ─▶ hard l
                                          daily: profit above float + 0.02 SOL ─▶ SOL sent to the profit address
 ```
 
+- **Method library** (`src/methods.js`): every round pulls 15-minute candles per pool from GeckoTerminal (free, no key, cached 10 min) and runs them through the `trading-signals` indicators (EMA 9/21, RSI 14, MACD, ATR 14, Bollinger 20/2, ADX 14). A regime-aware playbook (trend breakout when ADX>25, mean reversion when ADX<20, ATR stop, RSI exits, no chasing) is given to every agent with each token's reading, and the rule fallback trades the same playbook.
 - **Agents** ask Claude (`ANTHROPIC_API_KEY`). If Claude fails (no credits, outage, bad JSON) they try free backups in order: Google Gemini 2.5 Flash (`GEMINI_API_KEY`, free key at aistudio.google.com/apikey) then Groq GPT-OSS 120B (`GROQ_API_KEY`, free key at console.groq.com/keys). A provider that fails sits out for 10 minutes. If every provider fails, each agent uses built-in rules. Override models with `GEMINI_MODEL` / `GROQ_MODEL`.
 - **Hard limits** run after the Risk agent, so nothing an agent says can bypass them: pools under $100k liquidity are refused, each buy is capped (5/10/15% of equity for low/med/high risk), open positions are capped (2/3/4), and buys stop for the day after a 3/5/8% loss.
 - **Paper fills** pay 0.3% on every trade, so results are not flattered.
