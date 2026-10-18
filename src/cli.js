@@ -18,7 +18,7 @@ if (cmd === 'wallet-new') {
   console.log('balance', await balanceSol(conn, kp.publicKey.toBase58()), 'SOL on', config.cluster);
 } else if (cmd === 'round') {
   const config = loadConfig();
-  const desk = createDesk({ config, fetchMarket, brain: makeBrain({ apiKey: config.anthropicKey, model: config.agentModel }), wallet: null, log: (...a) => console.log(...a) });
+  const desk = createDesk({ config, fetchMarket, brain: makeBrain({ apiKey: config.anthropicKey, model: config.agentModel, backups: config.backups }), wallet: null, log: (...a) => console.log(...a) });
   const s = await desk.cycle();
   console.log(JSON.stringify(s.lastRound ?? s.lastError, null, 2));
 } else {

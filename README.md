@@ -16,7 +16,7 @@ DexScreener prices ─▶ Scout ─▶ Analyst ─▶ Risk Manager ─▶ hard l
                                          daily: profit above float + 0.02 SOL ─▶ SOL sent to the profit address
 ```
 
-- **Agents** ask Claude (`ANTHROPIC_API_KEY`). Without a key, or if a reply is not valid JSON, each agent falls back to built-in rules.
+- **Agents** ask Claude (`ANTHROPIC_API_KEY`). If Claude fails (no credits, outage, bad JSON) they try free backups in order: Google Gemini 2.5 Flash (`GEMINI_API_KEY`, free key at aistudio.google.com/apikey) then Groq Llama 3.3 70B (`GROQ_API_KEY`, free key at console.groq.com/keys). A provider that fails sits out for 10 minutes. If every provider fails, each agent uses built-in rules. Override models with `GEMINI_MODEL` / `GROQ_MODEL`.
 - **Hard limits** run after the Risk agent, so nothing an agent says can bypass them: pools under $100k liquidity are refused, each buy is capped (5/10/15% of equity for low/med/high risk), open positions are capped (2/3/4), and buys stop for the day after a 3/5/8% loss.
 - **Paper fills** pay 0.3% on every trade, so results are not flattered.
 - **Profit sweep** runs at most once a day. Only cash above the starting float plus a 0.02 SOL reserve leaves, and only to the allow-listed address (`src/config.js`). In paper mode with a devnet wallet it sends the matching devnet SOL; in shadow mode it is a record only. If a send fails, the profit stays in the book.
@@ -74,7 +74,7 @@ The Dockerfile is used automatically.
 
 | Setting | Value | Why |
 | --- | --- | --- |
-| Variables | `AGENT_WALLET_SECRET`, `ADMIN_SECRET` (24+ chars), `ANTHROPIC_API_KEY` | wallet, kill switch, agent brains |
+| Variables | `AGENT_WALLET_SECRET`, `ADMIN_SECRET` (24+ chars), `ANTHROPIC_API_KEY`, optional `GEMINI_API_KEY`, `GROQ_API_KEY` | wallet, kill switch, agent brains and free backups |
 | | `TRADING_MODE`, `FLOAT_SOL`, `JUPITER_API_KEY` | shadow and live need all three, plus `AGENT_WALLET_SECRET` |
 | | `SOLANA_RPC_URL` | a Helius mainnet URL for shadow and live |
 | | `DATA_PATH=/data/state.json`, `RAILWAY_RUN_UID=0` | keep the paper book on a volume; the image runs as non-root |
