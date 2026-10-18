@@ -45,3 +45,15 @@ test('Groq defaults to gpt-oss with low reasoning effort', async () => {
   assert.equal(calls[0].body.model, 'openai/gpt-oss-120b');
   assert.equal(calls[0].body.reasoning_effort, 'low');
 });
+
+test('agent prompts state the real mode and the hard limits', async () => {
+  const { runRound } = await import('./agents.js');
+  const prompts = [];
+  const brain = async p => { prompts.push(p); return { candidates: [], proposals: [{ token: 'JUP', action: 'buy', sizePct: 5 }], decisions: [] }; };
+  const market = { at: 0, tokens: [{ sym: 'JUP', price: 1, liq: 1e6, m5: 0, h1: 0, h6: 0, h24: 0, vol: 1, b1: 1, s1: 1 }] };
+  const book = { cash: 100, pos: {}, dayStartEquity: 100 };
+  await runRound({ book, market, brain, level: 'med', mode: 'live', execute: async () => [] });
+  assert.match(prompts[1], /with real funds/);
+  assert.match(prompts[1], /at most 10% of equity/);
+  assert.doesNotMatch(prompts.join(' '), /on paper/);
+});
