@@ -24,7 +24,7 @@ export function publicState(desk, config, wallet) {
     donations: { enabled: Boolean(config.donations && wallet), minSol: DONATION_MIN_SOL, maxSol: DONATION_MAX_SOL,
       totalSol: desk.state.deposits.reduce((a, d) => a + d.sol, 0), recent: desk.state.deposits.slice(-10) },
     profitAddress: config.profitAddress,
-    brain: config.anthropicKey ? 'claude' : 'rules',
+    brain: [config.anthropicKey && 'claude', ...(config.backups || []).map(b => b.name)].filter(Boolean).join(' > ') || 'rules',
     market, lastRound, lastError, walletValueSol: desk.state.wallet, floatSol: config.floatSol || null,
     book: book && { ...book, equity: market ? equity(book, market) : null },
   };
@@ -83,7 +83,7 @@ async function main() {
   const config = loadConfig();
   const keypair = loadKeypair(config.agentWalletSecret);
   const wallet = keypair ? { keypair, connection: connect(config.rpcUrl) } : null;
-  const brain = makeBrain({ apiKey: config.anthropicKey, model: config.agentModel });
+  const brain = makeBrain({ apiKey: config.anthropicKey, model: config.agentModel, backups: config.backups });
   // TRADING_MODE=live arms the Live switch; the bot still starts in shadow unless the switch was left on.
   const saved = await loadState(config.dataPath);
   const armed = config.mode === 'live';
@@ -100,7 +100,7 @@ async function main() {
   const persist = () => saveState(config.dataPath, { book: desk.state.book, liveOn: desk.state.mode === 'live', deposits: desk.state.deposits });
 
   const server = createServer({ desk, config, wallet, persist });
-  server.listen(config.port, () => log('info', 'listening', { port: config.port, mode, armed, cluster: config.cluster, wallet: wallet ? keypair.publicKey.toBase58() : null, brain: brain ? 'claude' : 'rules' }));
+  server.listen(config.port, () => log('info', 'listening', { port: config.port, mode, armed, cluster: config.cluster, wallet: wallet ? keypair.publicKey.toBase58() : null, brain: brain ? brain.providers.join(' > ') : 'rules' }));
 
   let running = false;
   const tick = async () => {

@@ -29,6 +29,10 @@ export function loadConfig(env = process.env) {
     donations: (env.DONATIONS || 'off').trim() === 'on',
     anthropicKey: env.ANTHROPIC_API_KEY || '',
     agentModel: env.AGENT_MODEL || 'claude-haiku-5-5',
+    backups: [
+      { name: 'gemini', key: (env.GEMINI_API_KEY || '').trim(), model: env.GEMINI_MODEL || undefined },
+      { name: 'groq', key: (env.GROQ_API_KEY || '').trim(), model: env.GROQ_MODEL || undefined },
+    ].filter(b => b.key),
     roundSeconds: Math.max(60, Number(env.ROUND_SECONDS) || 300),
     startUsd: Number(env.START_USD) || 100,
     maxDrawdown: Math.min(0.5, Math.max(0.05, Number(env.MAX_DRAWDOWN) || 0.2)),
