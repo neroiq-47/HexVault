@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HexVault</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Manrope:wght@400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* HexVault live console: served by the bot itself, reads /api/state, and holds the Live switch. */
+:root{--bg:#07060b;--bg-glow:#2a0f4a;--panel:#100c19;--panel-2:#171126;--line:#2c2340;--gold-line:rgba(212,175,55,.35);--fg:#f2eee6;--muted:#a59cb8;--gold:#d4af37;--gold-hi:#f3d98a;--purple:#8b3dff;--purple-deep:#4b1d8f;--good:#39ff88;--bad:#ff4d7d;--f-display:'Unbounded',system-ui,sans-serif;--f-body:'Manrope',system-ui,sans-serif;--f-mono:'JetBrains Mono',ui-monospace,monospace;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(1200px 600px at 85% -10%,var(--bg-glow),transparent 60%),radial-gradient(900px 500px at -10% 110%,rgba(139,61,255,.18),transparent 60%),var(--bg);background-attachment:fixed;min-height:100vh;color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.45}
+main{max-width:1100px;margin:0 auto;padding:28px 16px 48px;display:flex;flex-direction:column;gap:18px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.eyebrow{color:var(--gold);font-size:11px;letter-spacing:.2em;text-transform:uppercase}
+h1{font-family:var(--f-display);font-size:34px;margin:4px 0 0;background:linear-gradient(90deg,var(--gold-hi),var(--gold));-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font-family:var(--f-display);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin:0}
+.pill{font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;border:1px solid var(--gold-line);background:var(--panel-2);display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}
+.pill.live .dot{background:var(--good);box-shadow:0 0 10px var(--good)}
+.pill.halted .dot{background:var(--bad)}
+.panel{background:linear-gradient(160deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-top:1px solid var(--gold-line);border-radius:14px;padding:16px 18px;min-width:0}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:760px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));border:1px solid var(--gold-line);border-radius:14px;overflow:hidden;box-shadow:0 10px 40px rgba(75,29,143,.25)}
+.stat{padding:12px 16px;background:linear-gradient(180deg,var(--panel-2),var(--panel));border-right:1px solid var(--line)}
+.stat .k{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stat .v{font-family:var(--f-mono);font-size:20px;margin-top:4px;overflow-wrap:anywhere}
+.stat .v.gold{color:var(--gold-hi)}
+.up{color:var(--good)} .down{color:var(--bad)}
+/* The Live switch */
+.livebox{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.livebox p{margin:6px 0 0;color:var(--muted);max-width:60ch}
+.switch{position:relative;width:132px;height:56px;border-radius:999px;border:1px solid var(--gold);background:var(--panel-2);cursor:pointer;padding:0;flex:none;transition:background .25s,box-shadow .25s}
+.switch .knob{position:absolute;top:5px;left:5px;width:44px;height:44px;border-radius:50%;background:linear-gradient(135deg,var(--gold-hi),var(--gold));transition:left .25s}
+.switch .lbl{position:absolute;top:50%;transform:translateY(-50%);font-family:var(--f-display);font-size:13px;font-weight:700;letter-spacing:.1em}
+.switch .lbl.on{left:20px;color:#04140a;opacity:0} .switch .lbl.off{right:20px;color:var(--muted)}
+.switch[aria-checked="true"]{background:var(--good);box-shadow:0 0 28px rgba(57,255,136,.55)}
+.switch[aria-checked="true"] .knob{left:81px;background:#04140a}
+.switch[aria-checked="true"] .lbl.on{opacity:1} .switch[aria-checked="true"] .lbl.off{opacity:0}
+.switch:disabled{opacity:.45;cursor:not-allowed}
+.switch:focus-visible,button:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+button{font:inherit;font-weight:600;font-size:13px;border-radius:10px;border:1px solid var(--gold-line);background:var(--panel-2);color:var(--fg);padding:8px 14px;cursor:pointer}
+button.primary{background:linear-gradient(135deg,var(--purple),var(--purple-deep));border-color:var(--gold);color:#fff}
+button.danger{color:var(--bad);border-color:var(--bad)}
+input{font:inherit;background:var(--bg);color:var(--fg);border:1px solid var(--gold-line);border-radius:8px;padding:8px 10px;width:100%}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);opacity:.8;font-weight:600;padding:6px 8px;border-bottom:1px solid var(--gold-line)}
+td{padding:6px 8px;border-bottom:1px solid var(--line);font-family:var(--f-mono)}
+.scroll{overflow-x:auto}
+.agent{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:10px;background:linear-gradient(160deg,rgba(139,61,255,.08),transparent 60%)}
+.agent b{font-family:var(--f-display);font-size:12px;letter-spacing:.08em;color:var(--gold-hi)}
+.agent div{margin-top:4px;overflow-wrap:anywhere}
+.addr{font-family:var(--f-mono);font-size:12px;overflow-wrap:anywhere;color:var(--gold-hi)}
+.muted{color:var(--muted)} .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.msg{margin-top:10px;font-size:13px;min-height:1.2em}
+.msg.err{color:var(--bad)} .msg.ok{color:var(--good)}
+dialog{background:var(--panel-2);color:var(--fg);border:1px solid var(--gold);border-radius:14px;max-width:440px;width:calc(100% - 32px);padding:20px}
+dialog::backdrop{background:rgba(4,2,8,.75)}
+dialog h3{font-family:var(--f-display);font-size:16px;margin:0 0 8px;color:var(--gold-hi)}
+dialog ul{padding-left:18px;color:var(--muted)}
+label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div>
+      <span class="eyebrow">Solana · four-agent trading vault</span>
+      <h1>HexVault</h1>
+    </div>
+    <span class="pill" id="modePill"><span class="dot"></span><span id="modeText">Connecting…</span></span>
+  </header>
+
+  <section class="panel livebox" aria-labelledby="liveTitle">
+    <div>
+      <h2 id="liveTitle">Live trading</h2>
+      <p id="liveDesc">Loading the bot's state…</p>
+      <div class="msg" id="liveMsg" role="status" aria-live="polite"></div>
+    </div>
+    <button class="switch" id="liveSwitch" role="switch" aria-checked="false" aria-labelledby="liveTitle" disabled>
+      <span class="lbl on">ON</span><span class="lbl off">OFF</span><span class="knob"></span>
+    </button>
+  </section>
+
+  <section class="stats" aria-label="Headline numbers">
+    <div class="stat"><div class="k">Equity</div><div class="v gold" id="sEquity">-</div></div>
+    <div class="stat"><div class="k">P&amp;L vs start</div><div class="v" id="sPnl">-</div></div>
+    <div class="stat"><div class="k">Wallet value</div><div class="v" id="sWallet">-</div></div>
+    <div class="stat"><div class="k">Float</div><div class="v" id="sFloat">-</div></div>
+    <div class="stat"><div class="k">Rounds</div><div class="v" id="sRounds">-</div></div>
+  </section>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Agent room</h2>
+      <div id="agents" class="muted" style="margin-top:10px">No round yet.</div>
+    </section>
+    <section class="panel">
+      <h2>Positions</h2>
+      <div class="scroll"><table><thead><tr><th>Token</th><th>Amount</th><th>Value</th><th>Unrealised</th></tr></thead><tbody id="pos"></tbody></table></div>
+      <h2 style="margin-top:18px">Wallets</h2>
+      <p class="muted" style="margin:8px 0 4px">Agent wallet</p><div class="addr" id="agentAddr">-</div>
+      <p class="muted" style="margin:10px 0 4px">Profit goes only to</p><div class="addr" id="profitAddr">-</div>
+    </section>
+  </div>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>Trades</h2>
+      <div class="scroll"><table><thead><tr><th>Time</th><th>Side</th><th>Token</th><th>USD</th><th>Mode</th></tr></thead><tbody id="trades"></tbody></table></div>
+    </section>
+    <section class="panel">
+      <h2>Profit sweeps</h2>
+      <div class="scroll"><table><thead><tr><th>Time</th><th>SOL</th><th>Status</th></tr></thead><tbody id="sweeps"></tbody></table></div>
+      <h2 style="margin-top:18px">Safety</h2>
+      <div class="row">
+        <button class="danger" id="btnKill" type="button">Kill switch: close all and stop</button>
+        <button id="btnResume" type="button">Resume trading</button>
+      </div>
+      <div class="msg" id="safeMsg" role="status" aria-live="polite"></div>
+    </section>
+  </div>
+</main>
+
+<dialog id="dlg">
+  <form method="dialog" id="dlgForm">
+    <h3 id="dlgTitle">Turn live trading on?</h3>
+    <div id="dlgBody"></div>
+    <label for="secret">Admin secret (from ADMIN_SECRET in Railway; kept only in this tab)</label>
+    <input id="secret" type="password" autocomplete="off" required>
+    <div class="row">
+      <button class="primary" value="ok" id="dlgOk">Turn live on</button>
+      <button value="cancel" type="button" id="dlgCancel">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+const $ = id => document.getElementById(id);
+let state = null, secret = '';
+const usd = n => n == null ? '-' : (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const t = ts => new Date(ts).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const price = sym => state?.market?.tokens?.find(x => x.sym === sym)?.price || 0;
+
+async function load() {
+  try {
+    const r = await fetch('/api/state', { cache: 'no-store' });
+    state = await r.json(); render();
+  } catch (e) { $('modeText').textContent = 'Bot unreachable'; }
+}
+
+function render() {
+  const s = state, b = s.book || {}, live = s.mode === 'live';
+  const pill = $('modePill');
+  pill.className = 'pill' + (b.halted ? ' halted' : live ? ' live' : '');
+  $('modeText').textContent = b.halted ? 'Halted' : live ? 'LIVE · real SOL' : s.mode === 'shadow' ? 'Shadow · real prices, nothing sent' : 'Paper';
+  const sw = $('liveSwitch');
+  sw.setAttribute('aria-checked', String(live));
+  sw.disabled = !s.armed && !live;
+  $('liveDesc').textContent = live
+    ? `Live. The agents sign real Jupiter swaps from the agent wallet. Switch off to sell every position back to SOL and return to shadow mode.`
+    : s.armed
+      ? `Off. The bot is in shadow mode with real prices and nothing sent. Switch on to trade real SOL from the agent wallet (float ${s.floatSol} SOL).`
+      : `Locked. The bot is in ${s.mode} mode. Set TRADING_MODE=live in Railway to arm this switch.`;
+
+  $('sEquity').textContent = usd(b.equity);
+  const pnl = b.equity != null && b.startUsd ? b.equity - b.startUsd : null;
+  $('sPnl').textContent = pnl == null ? '-' : (pnl >= 0 ? '+' : '') + usd(pnl);
+  $('sPnl').className = 'v ' + (pnl > 0 ? 'up' : pnl < 0 ? 'down' : '');
+  $('sWallet').textContent = s.walletValueSol ? s.walletValueSol.total.toFixed(4) + ' SOL' : '-';
+  $('sFloat').textContent = s.floatSol ? s.floatSol + ' SOL' : usd(b.startUsd);
+  $('sRounds').textContent = b.rounds ?? '-';
+  $('agentAddr').textContent = s.agentWallet || 'none set';
+  $('profitAddr').textContent = s.profitAddress;
+
+  const r = s.lastRound;
+  if (r) {
+    const scout = (r.scout?.candidates || []).map(c => `${c.token}: ${c.reason}`).join('; ') || 'No candidates.';
+    const an = (r.analyst?.proposals || []).map(p => `${p.action} ${p.token}${p.reason ? ` (${p.reason})` : ''}`).join('; ') || 'Hold.';
+    const risk = (r.risk?.notes || []).join('; ') || 'No changes.';
+    $('agents').className = '';
+    $('agents').innerHTML = [['Scout', scout, r.scout?.via], ['Analyst', an, r.analyst?.via], ['Risk Manager', risk, r.risk?.via], ['Trader', r.trader?.note, null]]
+      .map(([n, m, via]) => `<div class="agent"><b>${n}</b>${via ? ` <span class="muted">· ${esc(via)}</span>` : ''}<div>${esc(m)}</div></div>`).join('')
+      + `<p class="muted" style="margin:10px 0 0">Last round ${t(r.at)}</p>`;
+  }
+
+  const pos = Object.entries(b.pos || {});
+  $('pos').innerHTML = pos.length ? pos.map(([sym, p]) => { const v = p.qty * price(sym), u = v - p.cost;
+    return `<tr><td>${esc(sym)}</td><td>${p.qty.toFixed(4)}</td><td>${usd(v)}</td><td class="${u >= 0 ? 'up' : 'down'}">${usd(u)}</td></tr>`; }).join('')
+    : `<tr><td colspan="4" class="muted">No open positions. Cash ${usd(b.cash)}.</td></tr>`;
+  const tr = (b.trades || []).slice(-15).reverse();
+  $('trades').innerHTML = tr.length ? tr.map(x => `<tr><td>${t(x.ts)}</td><td class="${x.side === 'buy' ? 'up' : 'down'}">${x.side}</td><td>${esc(x.sym)}</td><td>${usd(x.usd)}</td><td>${esc(x.mode || s.mode)}</td></tr>`).join('')
+    : `<tr><td colspan="5" class="muted">No trades yet.</td></tr>`;
+  const sw2 = (b.sweeps || []).slice(-10).reverse();
+  $('sweeps').innerHTML = sw2.length ? sw2.map(x => `<tr><td>${t(x.ts)}</td><td>${x.sol.toFixed(4)}</td><td>${esc(x.status)}</td></tr>`).join('')
+    : `<tr><td colspan="3" class="muted">No profit swept yet.</td></tr>`;
+}
+
+async function post(path, body) {
+  const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + secret }, body: JSON.stringify(body || {}) });
+  const j = await r.json().catch(() => ({}));
+  if (r.status === 401) secret = '';
+  if (!r.ok) throw new Error(j.error || `Request failed (${r.status})`);
+  return j;
+}
+
+function ask({ title, body, ok }) {
+  return new Promise(resolve => {
+    $('dlgTitle').textContent = title; $('dlgBody').innerHTML = body; $('dlgOk').textContent = ok;
+    $('secret').value = secret;
+    const d = $('dlg'); d.showModal();
+    $('dlgCancel').onclick = () => d.close('cancel');
+    d.onclose = () => { const yes = d.returnValue === 'ok'; if (yes) secret = $('secret').value.trim(); resolve(yes); };
+  });
+}
+
+function say(el, text, kind) { $(el).textContent = text; $(el).className = 'msg ' + (kind || ''); }
+
+$('liveSwitch').onclick = async () => {
+  const on = $('liveSwitch').getAttribute('aria-checked') !== 'true';
+  const yes = on
+    ? await ask({ title: 'Turn live trading on?', ok: 'Turn live on', body: `<p>The agents will trade <b>real SOL</b> from <span class="addr">${esc(state.agentWallet)}</span>.</p><ul><li>You can lose up to everything in that wallet. Profit is not guaranteed.</li><li>The hard limits, the drawdown stop and the kill switch stay on.</li><li>Profit is only ever swept to ${esc(state.profitAddress.slice(0, 6))}…${esc(state.profitAddress.slice(-4))}.</li></ul>` })
+    : await ask({ title: 'Turn live trading off?', ok: 'Turn live off', body: `<p>Every open position is sold back to SOL, then the bot carries on in shadow mode with nothing sent.</p>` });
+  if (!yes) return;
+  say('liveMsg', on ? 'Switching live on…' : 'Selling positions and switching off…');
+  try { const r = await post('/api/live', { on }); say('liveMsg', r.mode === 'live' ? 'Live trading is on.' : `Live trading is off.${r.fills?.length ? ` Sold ${r.fills.length} position(s).` : ''}`, 'ok'); }
+  catch (e) { say('liveMsg', e.message, 'err'); }
+  load();
+};
+
+$('btnKill').onclick = async () => {
+  if (!await ask({ title: 'Use the kill switch?', ok: 'Close all and stop', body: '<p>Every position is closed, trading stops, and any profit is swept.</p>' })) return;
+  try { const r = await post('/api/kill'); say('safeMsg', `Trading stopped. Closed ${r.fills.length} position(s).`, 'ok'); } catch (e) { say('safeMsg', e.message, 'err'); }
+  load();
+};
+$('btnResume').onclick = async () => {
+  if (!await ask({ title: 'Resume trading?', ok: 'Resume', body: '<p>The agents start trading again in the current mode.</p>' })) return;
+  try { await post('/api/resume'); say('safeMsg', 'Trading resumed.', 'ok'); } catch (e) { say('safeMsg', e.message, 'err'); }
+  load();
+};
+
+load();
+setInterval(load, 15000);
+</script>
+</body>
+</html>

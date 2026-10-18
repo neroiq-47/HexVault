@@ -38,6 +38,15 @@ npm test
 npm start                 # http://127.0.0.1:3000/api/state
 ```
 
+## Live switch
+
+The bot serves the HexVault console at `/` on its Railway domain. It shows the agents, positions, trades and sweeps, and holds a Live on/off switch.
+
+- `TRADING_MODE=live` only **arms** the switch. The bot still starts in shadow mode until someone turns the switch on.
+- **On** needs the admin secret, starts a fresh book from the agent wallet, and refuses if the wallet holds less than `FLOAT_SOL` minus the drawdown limit.
+- **Off** sells every live position back to SOL and returns to shadow mode.
+- The switch position survives redeploys. With any other `TRADING_MODE` the switch is locked.
+
 ## API
 
 | Route | What it does |
@@ -46,6 +55,8 @@ npm start                 # http://127.0.0.1:3000/api/state
 | `GET /api/state` | Prices, last round of agent messages, paper book, sweeps (never the wallet secret) |
 | `POST /api/kill` | Kill switch. Needs `Authorization: Bearer <ADMIN_SECRET>` |
 | `POST /api/resume` | Resume trading after a kill. Same header |
+| `POST /api/live` | Live switch: body `{"on": true}` or `{"on": false}`. Same header |
+| `GET /` | The HexVault console |
 
 ## Railway
 
@@ -67,7 +78,8 @@ Logs are one JSON object per line with a `level` field.
 
 1. Create a new wallet on your own machine with `npm run wallet:new`, and put the secret only in Railway's `AGENT_WALLET_SECRET`.
 2. Run `TRADING_MODE=shadow` for a day and read the logs and `/api/state`.
-3. Send the float to the agent wallet, set `FLOAT_SOL` to it, and set `TRADING_MODE=live`.
+3. Send the float to the agent wallet, set `FLOAT_SOL` to it, and set `TRADING_MODE=live` to arm the switch.
+4. Open the console and turn Live on.
 
 ## Dashboard
 
