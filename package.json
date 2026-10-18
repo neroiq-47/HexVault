@@ -1,0 +1,21 @@
+{
+  "name": "solana-agent-desk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Four cooperating AI agents paper-trading Solana tokens, with a devnet agent wallet and profit sweep.",
+  "scripts": {
+    "start": "node src/server.js",
+    "round": "node src/cli.js round",
+    "wallet:new": "node src/cli.js wallet-new",
+    "airdrop": "node src/cli.js airdrop",
+    "test": "node --test",
+    "check": "for f in src/*.js; do node --check \"$f\" || exit 1; done"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.135.0",
+    "@solana/web3.js": "^1.98.0",
+    "bs58": "^6.0.0"
+  },
+  "engines": { "node": ">=20" }
+}
