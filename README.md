@@ -68,3 +68,7 @@ Logs are one JSON object per line with a `level` field.
 1. Create a new wallet on your own machine with `npm run wallet:new`, and put the secret only in Railway's `AGENT_WALLET_SECRET`.
 2. Run `TRADING_MODE=shadow` for a day and read the logs and `/api/state`.
 3. Send the float to the agent wallet, set `FLOAT_SOL` to it, and set `TRADING_MODE=live`.
+
+## Dashboard
+
+`dashboard/index.html` is the HexVault dashboard: a single page that paper-trades in the browser with the same four agents and limits. It holds no keys. Open it in a browser to see the DexScreener snapshot; live prices and Claude-run agents work when it is opened as a claude.ai artifact.
