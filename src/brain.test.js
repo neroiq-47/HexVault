@@ -37,3 +37,11 @@ test('when every provider fails the error names each one', async () => {
   const brain = makeBrain({ client: broke, model: 'm', backups: [{ name: 'groq', key: 'k' }], fetchFn: bad });
   await assert.rejects(brain('x'), /claude: credit.*groq: groq HTTP 429/);
 });
+
+test('Groq defaults to gpt-oss with low reasoning effort', async () => {
+  const calls = [];
+  const brain = makeBrain({ backups: [{ name: 'groq', key: 'k' }], fetchFn: okFetch({ ok: 1 }, calls) });
+  await brain('x');
+  assert.equal(calls[0].body.model, 'openai/gpt-oss-120b');
+  assert.equal(calls[0].body.reasoning_effort, 'low');
+});
