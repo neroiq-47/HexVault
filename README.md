@@ -1,6 +1,14 @@
 # HexVault
 
-Four cooperating AI agents (Scout, Analyst, Risk Manager, Trader) watch live Solana prices and trade a **paper** portfolio. An agent wallet on **devnet** tests the profit sweep to `5qmsMSPXoTWDfsEDLoo15ywoPLSiKB7zqRGR9dSVfQTA`. No real funds are used: this version refuses mainnet.
+Four cooperating AI agents (Scout, Analyst, Risk Manager, Trader) watch live Solana prices and trade from an agent wallet, sweeping profit to `5qmsMSPXoTWDfsEDLoo15ywoPLSiKB7zqRGR9dSVfQTA`.
+
+| `TRADING_MODE` | What happens | Real funds |
+| --- | --- | --- |
+| `paper` (default) | Simulated fills at market price plus 0.3% | No |
+| `shadow` | Real Jupiter quotes on mainnet; fills are booked at the quoted amounts but nothing is sent | No |
+| `live` | Jupiter swaps signed by the agent wallet and sent on mainnet | **Yes** |
+
+**Live trading can lose money.** The most you can lose is what is in the agent wallet, so fund it only with a float you can afford to lose.
 
 ```
 DexScreener prices ─▶ Scout ─▶ Analyst ─▶ Risk Manager ─▶ hard limits (code) ─▶ Trader (paper fill)
@@ -13,6 +21,9 @@ DexScreener prices ─▶ Scout ─▶ Analyst ─▶ Risk Manager ─▶ hard l
 - **Paper fills** pay 0.3% on every trade, so results are not flattered.
 - **Profit sweep** runs at most once a day. Only cash above the starting float plus a 0.02 SOL reserve leaves, and only to the allow-listed address (`src/config.js`). On devnet the bot sends the matching amount of devnet SOL from the agent wallet. If the send fails, the profit stays in the book.
 - **Kill switch** closes every position, stops trading and sweeps any profit.
+- **Drawdown stop:** when equity falls `MAX_DRAWDOWN` (default 20%) below the float, the bot closes everything and halts. In live mode equity is the wallet's on-chain value.
+- **Live swaps** (`src/jupiter.js`, `src/live.js`): only the six watchlist tokens, SOL to token and back, slippage capped at 1%, quotes over 0.5% price impact are refused. A fill is booked only after the transaction confirms. In live mode the daily sweep sends only free SOL above the float plus reserve, and never more than the wallet's gain.
+- **Trust in Jupiter:** live mode signs the transaction Jupiter's API returns. Keep only the trading float in the agent wallet.
 
 ## Quick start
 
@@ -43,8 +54,8 @@ The Dockerfile is used automatically.
 | Setting | Value | Why |
 | --- | --- | --- |
 | Variables | `AGENT_WALLET_SECRET`, `ADMIN_SECRET` (24+ chars), `ANTHROPIC_API_KEY` | wallet, kill switch, agent brains |
-| | `SOLANA_CLUSTER=devnet` | the only clusters accepted are devnet and testnet |
-| | `SOLANA_RPC_URL` (optional) | a Helius devnet URL is more reliable than the public RPC |
+| | `TRADING_MODE`, `FLOAT_SOL`, `JUPITER_API_KEY` | shadow and live need all three, plus `AGENT_WALLET_SECRET` |
+| | `SOLANA_RPC_URL` | a Helius mainnet URL for shadow and live |
 | | `DATA_PATH=/data/state.json`, `RAILWAY_RUN_UID=0` | keep the paper book on a volume; the image runs as non-root |
 | Volume | mounted at `/data` | the book survives redeploys |
 | Healthcheck | `/health` | a deploy that never becomes healthy is marked failed |
@@ -52,6 +63,8 @@ The Dockerfile is used automatically.
 
 Logs are one JSON object per line with a `level` field.
 
-## Not in this version
+## Going live
 
-Mainnet trading and real Jupiter swaps. Those come in phase 3, only after paper results beat holding SOL and the owner approves live trading and a starting float.
+1. Create a new wallet on your own machine with `npm run wallet:new`, and put the secret only in Railway's `AGENT_WALLET_SECRET`.
+2. Run `TRADING_MODE=shadow` for a day and read the logs and `/api/state`.
+3. Send the float to the agent wallet, set `FLOAT_SOL` to it, and set `TRADING_MODE=live`.

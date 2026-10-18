@@ -47,7 +47,10 @@ async function think(brain, prompt, fallback) {
   catch (e) { return { ...fallback(), via: 'rules', error: String(e.message || e) }; }
 }
 
-export async function runRound({ book, market, brain, level, now = Date.now() }) {
+const paperExecute = async ({ book, market, approved, now }) =>
+  approved.map(a => a.action === 'buy' ? buy(book, market, a.token, a.usd, now) : sell(book, market, a.token, a.frac, now)).filter(Boolean);
+
+export async function runRound({ book, market, brain, level, now = Date.now(), execute = paperExecute }) {
   const m = brief(market), b = bookBrief(book, market);
   const scout = await think(brain, `You are Scout on a 4-agent Solana trading desk. Pick up to 3 tokens with the best short-term momentum, or a clear exit signal for held positions. ${GUARD}\nWatchlist: ${m}\nPortfolio: ${b}\nReturn {"candidates":[{"token":"SYM","reason":"<12 words"}]}`, () => ruleScout(market));
   scout.candidates = (scout.candidates || []).filter(c => market.tokens.some(t => t.sym === c.token)).slice(0, 3);
@@ -60,7 +63,7 @@ export async function runRound({ book, market, brain, level, now = Date.now() })
   if (actionable.length) review = await think(brain, `You are Risk Manager on a 4-agent Solana trading desk. Review these proposals. Reject trades on weak evidence or against the 6h trend; shrink oversized ones. ${GUARD}\nProposals: ${JSON.stringify(actionable)}\nWatchlist: ${m}\nPortfolio: ${b}\nReturn {"decisions":[{"token":"SYM","verdict":"approve|shrink|reject","sizePct":<number>,"reason":"<12 words"}]}`, () => ({ decisions: [] }));
   const { approved, notes } = applyLimits({ proposals: actionable, decisions: review.decisions || [], book, market, level });
 
-  const fills = approved.map(a => a.action === 'buy' ? buy(book, market, a.token, a.usd, now) : sell(book, market, a.token, a.frac, now)).filter(Boolean);
+  const fills = await execute({ book, market, approved, now });
   let traderNote = fills.length ? fills.map(f => `${f.side} ${f.sym} $${f.usd.toFixed(2)}`).join(', ') : 'No orders this round.';
   if (fills.length && brain) {
     const t = await think(brain, `You are Trader on a 4-agent Solana desk. In one sentence under 25 words, report these paper fills and what you will watch next. ${GUARD}\nFills: ${JSON.stringify(fills)}\nReturn {"note":"..."}`, () => ({ note: traderNote }));
