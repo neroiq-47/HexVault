@@ -47,6 +47,15 @@ The bot serves the HexVault console at `/` on its Railway domain. It shows the a
 - **Off** sells every live position back to SOL and returns to shadow mode.
 - The switch position survives redeploys. With any other `TRADING_MODE` the switch is locked.
 
+## Donations
+
+With `DONATIONS=on`, the console shows a "Support the agent team" panel. Visitors send 0.5 to 10 SOL from their own browser wallet, or scan a Solana Pay QR code, straight to the agent wallet.
+
+- The page states that a donation buys no share, return, profit or refund.
+- A donation made with the button is checked on chain before it counts. Counted donations raise the live baseline, so they are traded as float instead of being swept as profit.
+- SOL sent any other way (QR code, wallet app, a plain transfer) is not counted, so in live mode it is treated as profit and swept to the profit address.
+- Leave donations off until the agent wallet's secret has only ever been in Railway.
+
 ## API
 
 | Route | What it does |
@@ -56,6 +65,7 @@ The bot serves the HexVault console at `/` on its Railway domain. It shows the a
 | `POST /api/kill` | Kill switch. Needs `Authorization: Bearer <ADMIN_SECRET>` |
 | `POST /api/resume` | Resume trading after a kill. Same header |
 | `POST /api/live` | Live switch: body `{"on": true}` or `{"on": false}`. Same header |
+| `GET /api/blockhash`, `POST /api/donation` | Donation flow, only with `DONATIONS=on`. The POST takes `{"signature"}` and checks it on chain |
 | `GET /` | The HexVault console |
 
 ## Railway

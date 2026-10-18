@@ -57,6 +57,14 @@ td{padding:6px 8px;border-bottom:1px solid var(--line);font-family:var(--f-mono)
 .muted{color:var(--muted)} .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
 .msg{margin-top:10px;font-size:13px;min-height:1.2em}
 .msg.err{color:var(--bad)} .msg.ok{color:var(--good)}
+.donate{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:start}
+@media (max-width:620px){.donate{grid-template-columns:minmax(0,1fr)}}
+.amounts{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.amounts button.sel{border-color:var(--gold);box-shadow:0 0 12px rgba(212,175,55,.35)}
+.amt{display:flex;align-items:center;gap:8px;margin-top:10px;max-width:220px}
+.qr{background:#fff;border-radius:10px;padding:8px;width:156px;height:156px;display:grid;place-items:center}
+.qr svg,.qr img{width:140px;height:140px}
+.fine{font-size:12px;color:var(--muted);margin-top:10px;max-width:70ch}
 dialog{background:var(--panel-2);color:var(--fg);border:1px solid var(--gold);border-radius:14px;max-width:440px;width:calc(100% - 32px);padding:20px}
 dialog::backdrop{background:rgba(4,2,8,.75)}
 dialog h3{font-family:var(--f-display);font-size:16px;margin:0 0 8px;color:var(--gold-hi)}
@@ -91,6 +99,28 @@ label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
     <div class="stat"><div class="k">Wallet value</div><div class="v" id="sWallet">-</div></div>
     <div class="stat"><div class="k">Float</div><div class="v" id="sFloat">-</div></div>
     <div class="stat"><div class="k">Rounds</div><div class="v" id="sRounds">-</div></div>
+  </section>
+
+  <section class="panel" id="donatePanel" hidden aria-labelledby="donateTitle">
+    <div class="donate">
+      <div>
+        <h2 id="donateTitle">Support the agent team</h2>
+        <p class="muted" style="margin:6px 0 0">Send a donation of <span id="dRange">0.5 to 10</span> SOL to the agent wallet. Donated SOL is traded by the agents.</p>
+        <div class="amounts" role="group" aria-label="Quick amounts">
+          <button type="button" data-sol="0.5">0.5 SOL</button><button type="button" data-sol="1" class="sel">1 SOL</button><button type="button" data-sol="5">5 SOL</button><button type="button" data-sol="10">10 SOL</button>
+        </div>
+        <label for="dAmount">Amount in SOL</label>
+        <div class="amt"><input id="dAmount" type="number" min="0.5" max="10" step="0.1" value="1" inputmode="decimal"></div>
+        <div class="row">
+          <button class="primary" type="button" id="btnDonate">Donate with a browser wallet</button>
+          <a id="dLink" href="#"><button type="button" tabindex="-1">Open in a wallet app</button></a>
+        </div>
+        <div class="msg" id="donateMsg" role="status" aria-live="polite"></div>
+        <p class="fine"><b>This is a donation, not an investment.</b> It buys no share, return, profit or refund, and trading can lose it. Donations sent by QR code or a wallet app reach the agent wallet but are not shown in the total.</p>
+        <p class="muted" style="margin:8px 0 0">Donated so far: <span id="dTotal" class="addr">0 SOL</span></p>
+      </div>
+      <div><div class="qr" id="dQr" aria-label="QR code for the donation"></div><p class="fine" style="text-align:center">Scan with Phantom or Solflare</p></div>
+    </div>
   </section>
 
   <div class="grid">
@@ -176,6 +206,7 @@ function render() {
   $('sRounds').textContent = b.rounds ?? '-';
   $('agentAddr').textContent = s.agentWallet || 'none set';
   $('profitAddr').textContent = s.profitAddress;
+  renderDonations();
 
   const r = s.lastRound;
   if (r) {
@@ -241,6 +272,63 @@ $('btnResume').onclick = async () => {
   if (!await ask({ title: 'Resume trading?', ok: 'Resume', body: '<p>The agents start trading again in the current mode.</p>' })) return;
   try { await post('/api/resume'); say('safeMsg', 'Trading resumed.', 'ok'); } catch (e) { say('safeMsg', e.message, 'err'); }
   load();
+};
+
+// Donations: a plain SOL transfer signed in the donor's own wallet, then checked on chain by the bot.
+const D = { min: 0.5, max: 10, libs: null };
+const loadScript = src => new Promise((ok, bad) => { const el = document.createElement('script'); el.src = src; el.onload = ok; el.onerror = () => bad(new Error('Could not load ' + src)); document.head.appendChild(el); });
+const libs = () => D.libs ||= Promise.all([
+  loadScript('https://unpkg.com/@solana/web3.js@1.98.0/lib/index.iife.min.js'),
+  loadScript('https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js'),
+]);
+const amount = () => Number($('dAmount').value);
+const validAmount = a => a >= D.min && a <= D.max;
+function donateLink() {
+  const a = amount(), to = state.agentWallet;
+  const href = `solana:${to}?amount=${validAmount(a) ? a : D.min}&label=HexVault&message=${encodeURIComponent('Donation to the HexVault agent team')}`;
+  $('dLink').href = href;
+  if (window.qrcode) { const q = qrcode(0, 'M'); q.addData(href); q.make(); $('dQr').innerHTML = q.createSvgTag({ cellSize: 3, margin: 0, scalable: true }); }
+}
+function renderDonations() {
+  const d = state.donations;
+  $('donatePanel').hidden = !d?.enabled;
+  if (!d?.enabled) return;
+  D.min = d.minSol; D.max = d.maxSol;
+  $('dRange').textContent = `${d.minSol} to ${d.maxSol}`;
+  $('dAmount').min = d.minSol; $('dAmount').max = d.maxSol;
+  $('dTotal').textContent = `${d.totalSol.toFixed(2)} SOL`;
+  donateLink();
+  libs().then(donateLink).catch(() => {});
+}
+document.querySelectorAll('.amounts button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.amounts button').forEach(x => x.classList.toggle('sel', x === b));
+  $('dAmount').value = b.dataset.sol; donateLink();
+});
+$('dAmount').oninput = () => { document.querySelectorAll('.amounts button').forEach(x => x.classList.toggle('sel', Number(x.dataset.sol) === amount())); donateLink(); };
+$('btnDonate').onclick = async () => {
+  const a = amount();
+  if (!validAmount(a)) return say('donateMsg', `Choose an amount from ${D.min} to ${D.max} SOL.`, 'err');
+  const provider = window.phantom?.solana || window.solflare || window.backpack || window.solana;
+  if (!provider) return say('donateMsg', 'No browser wallet found. Scan the QR code or use "Open in a wallet app".', 'err');
+  try {
+    await libs();
+    const { PublicKey, SystemProgram, Transaction } = solanaWeb3;
+    await provider.connect();
+    const from = provider.publicKey;
+    const bh = await (await fetch('/api/blockhash', { cache: 'no-store' })).json();
+    const tx = new Transaction({ feePayer: from, blockhash: bh.blockhash, lastValidBlockHeight: bh.lastValidBlockHeight })
+      .add(SystemProgram.transfer({ fromPubkey: from, toPubkey: new PublicKey(state.agentWallet), lamports: Math.round(a * 1e9) }));
+    say('donateMsg', 'Confirm the donation in your wallet…');
+    const { signature } = await provider.signAndSendTransaction(tx);
+    say('donateMsg', 'Sent. Waiting for the network to confirm it…');
+    for (let i = 0; i < 20; i++) {
+      const r = await fetch('/api/donation', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ signature }) });
+      if (r.status === 200) { say('donateMsg', `Thank you. ${a} SOL received by the agent team.`, 'ok'); return load(); }
+      if (r.status !== 202) { const j = await r.json().catch(() => ({})); throw new Error(j.error || 'The donation could not be checked'); }
+      await new Promise(ok => setTimeout(ok, 3000));
+    }
+    say('donateMsg', `Sent, but the network had not confirmed it after a minute, so it is not counted on this page. Signature: ${signature}`, 'err');
+  } catch (e) { say('donateMsg', e.message || String(e), 'err'); }
 };
 
 load();

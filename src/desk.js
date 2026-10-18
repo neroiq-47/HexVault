@@ -9,7 +9,9 @@ const DAY_MS = 864e5;
 const MIN_SWEEP_SOL = 0.005;
 
 export function createDesk({ config, fetchMarket, brain, wallet, executor, executors, mode = config.mode, log = () => {} }) {
-  const state = { mode, book: null, market: null, lastRound: null, lastError: null, wallet: null };
+  const state = { mode, book: null, market: null, lastRound: null, lastError: null, wallet: null, deposits: [] };
+  // Donations raise the live baseline, so they are traded as float rather than swept as profit.
+  const baseSol = () => config.floatSol + state.deposits.reduce((a, d) => a + d.sol, 0);
   const execs = executors || (executor ? { [mode]: executor } : {});
   const isLive = () => state.mode === 'live';
   const exec = () => execs[state.mode] || null;
@@ -28,7 +30,7 @@ export function createDesk({ config, fetchMarket, brain, wallet, executor, execu
 
   // Equity as a fraction of the start: on-chain wallet value when live, the book otherwise.
   function equityRatio() {
-    if (isLive()) return state.wallet.total / config.floatSol;
+    if (isLive()) return state.wallet.total / baseSol();
     return equity(state.book, state.market) / state.book.startUsd;
   }
 
@@ -50,7 +52,7 @@ export function createDesk({ config, fetchMarket, brain, wallet, executor, execu
     if (isLive()) {
       // Real profit only: free SOL above the float plus reserve, never more than the wallet's gain.
       const w = state.wallet;
-      record.sol = Math.max(0, Math.min(w.sol - RESERVE_SOL, w.total - config.floatSol - RESERVE_SOL));
+      record.sol = Math.max(0, Math.min(w.sol - RESERVE_SOL, w.total - baseSol() - RESERVE_SOL));
       if (record.sol < MIN_SWEEP_SOL) return null;
       record.usd = record.sol * solPx;
       await sendProfit(record);
@@ -121,7 +123,7 @@ export function createDesk({ config, fetchMarket, brain, wallet, executor, execu
     state.book = null; state.wallet = null;
     try {
       await refresh();
-      if (on && state.wallet.total < config.floatSol * (1 - config.maxDrawdown)) {
+      if (on && state.wallet.total < baseSol() * (1 - config.maxDrawdown)) {
         throw new Error(`The agent wallet holds ${state.wallet.total.toFixed(4)} SOL. Fund it with FLOAT_SOL (${config.floatSol} SOL) or lower FLOAT_SOL.`);
       }
     } catch (e) {
@@ -133,6 +135,14 @@ export function createDesk({ config, fetchMarket, brain, wallet, executor, execu
     return { mode: state.mode, fills };
   }
 
+  // A donation the server has verified on chain. Duplicates are ignored.
+  function addDeposit(d) {
+    if (state.deposits.some(x => x.signature === d.signature)) return false;
+    state.deposits.push(d);
+    log('info', 'donation received', d);
+    return true;
+  }
+
   const cycle = serial(cycleNow), kill = serial(killNow), setLive = serial(setLiveNow);
-  return { state, refresh, cycle, sweep, kill, resume, setLive };
+  return { state, refresh, cycle, sweep, kill, resume, setLive, addDeposit };
 }
