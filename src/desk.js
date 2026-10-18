@@ -98,7 +98,7 @@ export function createDesk({ config, fetchMarket, brain, wallet, executor, execu
       rollDay(book, market, now);
       if (!book.halted && equityRatio() <= 1 - config.maxDrawdown) await killNow(now, `drawdown over ${config.maxDrawdown * 100}%`);
       if (!book.halted) {
-        state.lastRound = await runRound({ book, market, brain, level: config.riskLevel, now, ...(exec() ? { execute: exec() } : {}) });
+        state.lastRound = await runRound({ book, market, brain, level: config.riskLevel, mode: state.mode, now, ...(exec() ? { execute: exec() } : {}) });
         book.rounds++;
         if (isLive()) state.wallet = await walletValueSol(wallet.connection, wallet.keypair.publicKey.toBase58(), market);
       }

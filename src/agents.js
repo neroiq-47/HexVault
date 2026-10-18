@@ -94,23 +94,26 @@ async function think(brain, prompt, fallback) {
 const paperExecute = async ({ book, market, approved, now }) =>
   approved.map(a => a.action === 'buy' ? buy(book, market, a.token, a.usd, now) : sell(book, market, a.token, a.frac, now)).filter(Boolean);
 
-export async function runRound({ book, market, brain, level, now = Date.now(), execute = paperExecute }) {
+export async function runRound({ book, market, brain, level, mode = 'paper', now = Date.now(), execute = paperExecute }) {
   const m = brief(market), b = bookBrief(book, market);
+  const lim = LIMITS[level];
+  const venue = mode === 'live' ? 'with real funds' : 'in practice mode';
+  const rules = `Hard limits enforced in code: each buy is at most ${lim.cap * 100}% of equity, at most ${lim.maxPos} open positions, tokens need $100k liquidity, about 0.3% cost per trade.`;
   const scout = await think(brain, `You are Scout on a 4-agent Solana trading desk. Pick up to 3 tokens with the best short-term momentum, or a clear exit signal for held positions. ${GUARD}\nWatchlist: ${m}\nPortfolio: ${b}\nReturn {"candidates":[{"token":"SYM","reason":"<12 words"}]}`, () => ruleScout(market));
   scout.candidates = (scout.candidates || []).filter(c => market.tokens.some(t => t.sym === c.token)).slice(0, 3);
 
-  const analyst = await think(brain, `You are Analyst on a 4-agent Solana trading desk trading on paper. Given the Scout's picks, the watchlist and the portfolio, propose trades. Prefer holding over weak signals; costs are 0.3% per trade. ${GUARD}\nScout: ${JSON.stringify(scout.candidates)}\nWatchlist: ${m}\nPortfolio: ${b}\nReturn {"proposals":[{"token":"SYM","action":"buy|sell|hold","sizePct":<percent of equity for buys, of position for sells>,"confidence":0-1,"reason":"<15 words"}]}`, () => ruleAnalyst(scout, book, market, level));
+  const analyst = await think(brain, `You are Analyst on a 4-agent Solana trading desk trading ${venue}. ${rules} Given the Scout's picks, the watchlist and the portfolio, propose trades. Prefer holding over weak signals. ${GUARD}\nScout: ${JSON.stringify(scout.candidates)}\nWatchlist: ${m}\nPortfolio: ${b}\nReturn {"proposals":[{"token":"SYM","action":"buy|sell|hold","sizePct":<percent of equity for buys, of position for sells>,"confidence":0-1,"reason":"<15 words"}]}`, () => ruleAnalyst(scout, book, market, level));
   const proposals = (analyst.proposals || []).filter(p => p && typeof p.token === 'string');
   const actionable = proposals.filter(p => p.action === 'buy' || p.action === 'sell');
 
   let review = { decisions: [], via: 'rules' };
-  if (actionable.length) review = await think(brain, `You are Risk Manager on a 4-agent Solana trading desk. Review these proposals. Reject trades on weak evidence or against the 6h trend; shrink oversized ones. ${GUARD}\nProposals: ${JSON.stringify(actionable)}\nWatchlist: ${m}\nPortfolio: ${b}\nReturn {"decisions":[{"token":"SYM","verdict":"approve|shrink|reject","sizePct":<number>,"reason":"<12 words"}]}`, () => ({ decisions: [] }));
+  if (actionable.length) review = await think(brain, `You are Risk Manager on a 4-agent Solana trading desk trading ${venue}. ${rules} Review these proposals. Reject trades on weak evidence or against the 6h trend; shrink oversized ones. ${GUARD}\nProposals: ${JSON.stringify(actionable)}\nWatchlist: ${m}\nPortfolio: ${b}\nReturn {"decisions":[{"token":"SYM","verdict":"approve|shrink|reject","sizePct":<number>,"reason":"<12 words"}]}`, () => ({ decisions: [] }));
   const { approved, notes } = applyLimits({ proposals: actionable, decisions: review.decisions || [], book, market, level });
 
   const fills = await execute({ book, market, approved, now });
   let traderNote = fills.length ? fills.map(f => `${f.side} ${f.sym} $${f.usd.toFixed(2)}`).join(', ') : 'No orders this round.';
   if (fills.length && brain) {
-    const t = await think(brain, `You are Trader on a 4-agent Solana desk. In one sentence under 25 words, report these paper fills and what you will watch next. ${GUARD}\nFills: ${JSON.stringify(fills)}\nReturn {"note":"..."}`, () => ({ note: traderNote }));
+    const t = await think(brain, `You are Trader on a 4-agent Solana desk. In one sentence under 25 words, report these fills (${venue}) and what you will watch next. ${GUARD}\nFills: ${JSON.stringify(fills)}\nReturn {"note":"..."}`, () => ({ note: traderNote }));
     if (typeof t.note === 'string') traderNote = t.note.slice(0, 300);
   }
   return { at: now, scout, analyst: { proposals, via: analyst.via }, risk: { notes, via: review.via }, trader: { note: traderNote, fills } };
