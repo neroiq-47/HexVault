@@ -43,7 +43,7 @@ npm start                 # http://127.0.0.1:3000/api/state
 
 ## Live switch
 
-The bot serves the HexSyndicate Desk at `/` on its Railway domain. It shows the agents, positions, trades and sweeps, and holds a Live on/off switch.
+The bot serves the HexSyndicate Desk at `/` on its Railway domain, [hexsyndicate.up.railway.app](https://hexsyndicate.up.railway.app). It shows the agents, positions, trades and sweeps, and holds a Live on/off switch.
 
 - `TRADING_MODE=live` only **arms** the switch. The bot still starts in shadow mode until someone turns the switch on.
 - **On** needs the admin secret, starts a fresh book from the agent wallet, and refuses if the wallet holds less than `FLOAT_SOL` minus the drawdown limit.
@@ -143,7 +143,7 @@ API: `GET /api/degen/state`, `GET /api/degen/token/:mint`, `GET /api/degen/chart
 
 ## Pumpflip Telegram calls
 
-Set `TELEGRAM_BOT_TOKEN` in Railway (never in the repo) and every Degen Radar opportunity alert is posted to [@Pumpflip_fun](https://t.me/Pumpflip_fun) as a photo call: the token's own picture (or the bundled `public/call-card.png` when it has none), score, market cap, liquidity, entry and exit zones, rug-check result, the CA, and buttons for Jupiter, DexScreener, GMGN, pump.fun, a Stars tip and a SOL donation. Calls are spaced out and capped at `TG_CALLS_PER_HOUR`; a token is called at most once every six hours. The linked discussion chat [@Pumpflip_chat](https://t.me/Pumpflip_chat) gets the auto-forward and a welcome line for new members in the current tone.
+Set `TELEGRAM_BOT_TOKEN` in Railway (never in the repo) and every Degen Radar opportunity alert is posted to [@Pumpflip_fun](https://t.me/Pumpflip_fun) as a photo call: the token's own picture (or the bundled `public/call-card.png` when it has none), score, market cap, liquidity, entry and exit zones, rug-check result, the CA, and buttons for Jupiter, DexScreener, GMGN, pump.fun, a Stars tip and a SOL donation. Calls are spaced out and capped at `TG_CALLS_PER_HOUR`; a token is called at most once every six hours. The linked discussion chat [@Pumpflip_chat](https://t.me/Pumpflip_chat) gets the auto-forward and a welcome line for new members in the current tone, with a link to the Desk.
 
 Setup in Telegram: add the bot as an admin of the channel (post messages, edit info) and of the discussion chat, then DM it `/start` from @Its_neroiq47 so it learns the owner's id.
 

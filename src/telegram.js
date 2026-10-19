@@ -207,7 +207,8 @@ export function createTelegram({ config, fetchImpl = fetch, now = Date.now, log 
       if (now() - s.lastWelcomeAt < 60000) return;
       s.lastWelcomeAt = now();
       const names = m.new_chat_members.filter(u => !u.is_bot).map(u => esc(u.first_name || u.username || 'degen')).slice(0, 5).join(', ');
-      if (names) await send(m.chat.id, s.welcome ? esc(s.welcome).replaceAll('{name}', names) : TONES[s.tone].welcome(names));
+      const site = config.publicUrl ? `\nThe Desk: ${config.publicUrl}` : '';
+      if (names) await send(m.chat.id, (s.welcome ? esc(s.welcome).replaceAll('{name}', names) : TONES[s.tone].welcome(names)) + site);
       return;
     }
     if (m.chat.type !== 'private' || !text.startsWith('/')) return;
