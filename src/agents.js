@@ -67,7 +67,7 @@ const indBrief = s => s && { regime: s.regime, adx: s.adx, rsi: s.rsi, ema9vsEma
   macdHist: +s.macdHist.toPrecision(3), atrPct: s.atrPct, bollingerPos: +((s.close - s.bbLower) / ((s.bbUpper - s.bbLower) || 1)).toFixed(2), volumeTrend: s.volTrend };
 const heldOf = (book, sym) => { const p = book.pos[sym]; return p && p.qty > 0 ? { entry: p.cost / p.qty } : null; };
 const brief = (market, book) => JSON.stringify(market.tokens.map(t => ({ token: t.sym, priceUsd: t.price, change5m: t.m5, change1h: t.h1, change6h: t.h6, change24h: t.h24, volume24hUsd: Math.round(t.vol), liquidityUsd: Math.round(t.liq), buys1h: t.b1, sells1h: t.s1,
-  indicators15m: indBrief(t.ind) || 'unavailable', playbook: methodSignal(t.ind, t, heldOf(book, t.sym)) })));
+  indicators15m: indBrief(t.ind) || 'unavailable', smartMoney24h: t.smart || 'no wallets tracked', playbook: methodSignal(t.ind, t, heldOf(book, t.sym)) })));
 const bookBrief = (book, market) => JSON.stringify({ cashUsd: +book.cash.toFixed(2), equityUsd: +equity(book, market).toFixed(2), positions: Object.entries(book.pos).map(([s, p]) => ({ token: s, qty: p.qty, costUsd: +p.cost.toFixed(2), valueUsd: +(p.qty * priceOf(market, s)).toFixed(2) })) });
 
 export function ruleScout(market, book = { pos: {} }) {

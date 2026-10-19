@@ -5,7 +5,7 @@ import { parseGeckoPools, parseDexPairs, parseMint, parseTokenInfo, parseReddit,
 import { mergeTokens, features, matchPreset, DEFAULT_PRESETS, createHistory, toRow, tokenFromRow, validatePresets } from './scanner.js';
 import { assessSecurity } from './security.js';
 import { sentiment, shillScore, flagPosts, matchMentions, socialMomentum, narratives } from './social.js';
-import { parseSwap, walletStats, flows, linkedWallets, smartSignal, MIN_TRADES } from './wallets.js';
+import { parseSwap, walletStats, flows, linkedWallets, smartSignal, smartFlow, MIN_TRADES } from './wallets.js';
 import { degenScore, zones } from './score.js';
 import { newBook, openTrade, manage, bookStats } from './paper.js';
 import { backtest } from './backtest.js';
@@ -316,4 +316,13 @@ test('a chart falls back to the last candles when GeckoTerminal is rate limited'
   t = 10 * 60000; // the cache has expired and the next call is refused
   assert.deepEqual(await sources.candles('POOL', 5, 0), first);
   assert.equal(calls, 2);
+});
+
+test('smart flow summarises both directions for the desk agents', () => {
+  const w = (trades, rel = 60) => ({ address: 'x', label: 'x', trades, stats: { reliability: rel } });
+  assert.equal(smartFlow(GOOD, {}, 0), null);
+  const wallets = { a: w([{ t: 10, mint: GOOD, side: 'buy', sol: 2 }]), b: w([{ t: 10, mint: GOOD, side: 'sell', sol: 1 }]), c: w([{ t: 10, mint: GOOD, side: 'sell', sol: 1 }]) };
+  const f = smartFlow(GOOD, wallets, 0);
+  assert.deepEqual({ buyers: f.buyers, sellers: f.sellers, netSol: f.netSol, state: f.state }, { buyers: 1, sellers: 2, netSol: 0, state: 'distributing' });
+  assert.equal(smartFlow(BAD, wallets, 0).state, 'quiet');
 });
