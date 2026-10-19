@@ -2,6 +2,7 @@
 import { equity, priceOf } from './paper.js';
 
 export const MIN_LIQUIDITY_USD = 100_000;
+export const MIN_ORDER_USD = 1;
 export const LIMITS = Object.freeze({
   low: { cap: 0.05, maxPos: 2, dayStop: 0.03 },
   med: { cap: 0.10, maxPos: 3, dayStop: 0.05 },
@@ -24,7 +25,12 @@ export function applyLimits({ proposals, decisions = [], book, market, level }) 
     if (d?.verdict === 'shrink') size = Math.min(size, Number(d.sizePct) || size / 2);
     if (p.action === 'sell') {
       if (!book.pos[p.token]) { notes.push(`${p.token} sell skipped: not held`); continue; }
-      approved.push({ action: 'sell', token: p.token, frac: Math.min(1, (size || 100) / 100) });
+      // Tiny partial sells only pay fees, so trims under $1 are skipped and a remainder under $1 is closed out.
+      let frac = Math.min(1, (size || 100) / 100);
+      const posUsd = book.pos[p.token].qty * priceOf(market, p.token);
+      if (frac < 1 && posUsd * (1 - frac) < MIN_ORDER_USD) frac = 1;
+      if (frac < 1 && posUsd * frac < MIN_ORDER_USD) { notes.push(`${p.token} sell skipped: trim under $1`); continue; }
+      approved.push({ action: 'sell', token: p.token, frac });
       notes.push(`${p.token} sell approved`); continue;
     }
     if (book.halted) { notes.push(`${p.token} blocked: trading halted`); continue; }
@@ -34,7 +40,7 @@ export function applyLimits({ proposals, decisions = [], book, market, level }) 
     if (open >= lim.maxPos) { notes.push(`${p.token} blocked: position limit`); continue; }
     size = Math.min(size, lim.cap * 100);
     const usd = Math.min(eq * size / 100, cash);
-    if (usd < 1 || !(priceOf(market, p.token) > 0)) { notes.push(`${p.token} skipped: size too small`); continue; }
+    if (usd < MIN_ORDER_USD || !(priceOf(market, p.token) > 0)) { notes.push(`${p.token} skipped: size too small`); continue; }
     cash -= usd; open++;
     approved.push({ action: 'buy', token: p.token, usd });
     notes.push(`${p.token} buy approved at ${size.toFixed(1)}%`);
