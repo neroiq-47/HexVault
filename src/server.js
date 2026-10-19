@@ -17,8 +17,10 @@ import { DONATION_MIN_SOL, DONATION_MAX_SOL } from './config.js';
 import { PublicKey } from '@solana/web3.js';
 import { createDegen, degenConfig } from './degen/engine.js';
 import { createDegenRoutes } from './degen/http.js';
+import { createTelegram, telegramConfig } from './telegram.js';
 
 const SITE = readFileSync(new URL('../public/index.html', import.meta.url));
+const DONATE = readFileSync(new URL('../public/donate.html', import.meta.url));
 
 export function publicState(desk, config, wallet) {
   const { book, market, lastRound, lastError } = desk.state;
@@ -47,13 +49,16 @@ function authorised(req, secret) {
   return got.length === want.length && timingSafeEqual(got, want);
 }
 
-export function createServer({ desk, config, wallet, persist, degenRoutes }) {
+export function createServer({ desk, config, wallet, persist, degenRoutes, telegram = null }) {
   return http.createServer(async (req, res) => {
     const send = (code, body) => { res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(body)); };
     try {
       if (degenRoutes && await degenRoutes.handle(req, res, send)) return;
       if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer' }); return res.end(SITE); }
       if (req.method === 'GET' && req.url === '/health') return send(200, { ok: true });
+      // Pumpflip SOL donations: a Solana Pay page for the project wallet, from $25 worth up to 10 SOL.
+      if (req.method === 'GET' && telegram && /^\/donate(\?|$)/.test(req.url)) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer' }); return res.end(DONATE); }
+      if (req.method === 'GET' && telegram && req.url === '/api/donate') return send(200, await telegram.publicView());
       if (req.method === 'GET' && req.url === '/api/state') return send(200, publicState(desk, config, wallet));
       if (req.method === 'POST' && (req.url === '/api/kill' || req.url === '/api/resume')) {
         if (!authorised(req, config.adminSecret)) return send(401, { error: 'Send Authorization: Bearer <ADMIN_SECRET>' });
@@ -106,12 +111,18 @@ async function main() {
   if (saved?.deposits) desk.state.deposits = saved.deposits;
   const persist = () => saveState(config.dataPath, { book: desk.state.book, liveOn: desk.state.mode === 'live', deposits: desk.state.deposits });
 
+  // Pumpflip Telegram bot: posts Degen Radar calls to the channel and takes Stars tips. The token lives only in Railway.
+  const tcfg = telegramConfig(process.env, config);
+  const telegram = tcfg.enabled ? createTelegram({ config: tcfg, log, saved: await loadState(tcfg.dataPath).catch(() => null), persist: st => saveState(tcfg.dataPath, st) }) : null;
+  if (telegram) telegram.start().catch(e => log('error', 'telegram bot failed to start', { message: String(e.message || e) }));
+
   // Axiom Degen scanner: paper trading and alerts only, on its own loop and its own state file.
   const dcfg = degenConfig(process.env, config);
   let degenRoutes = null;
   if (dcfg.enabled) {
     const isOnCurve = a => { try { return PublicKey.isOnCurve(new PublicKey(a).toBytes()); } catch { return true; } };
-    const degen = createDegen({ config: dcfg, log, brain, isOnCurve, saved: await loadState(dcfg.dataPath).catch(() => null) });
+    const degen = createDegen({ config: dcfg, log, brain, isOnCurve, saved: await loadState(dcfg.dataPath).catch(() => null), onCall: telegram ? (a, r) => telegram.postCall(a, r) : null });
+    telegram?.attach(degen);
     const persistDegen = () => saveState(dcfg.dataPath, degen.toJSON());
     degenRoutes = createDegenRoutes({ degen, authorised: req => authorised(req, config.adminSecret), readJson, persist: persistDegen });
     let busy = false;
@@ -129,7 +140,7 @@ async function main() {
     setInterval(scan, dcfg.scanMs).unref();
   }
 
-  const server = createServer({ desk, config, wallet, persist, degenRoutes });
+  const server = createServer({ desk, config, wallet, persist, degenRoutes, telegram });
   server.listen(config.port, () => log('info', 'listening', { port: config.port, mode, armed, cluster: config.cluster, wallet: wallet ? keypair.publicKey.toBase58() : null, brain: brain ? brain.providers.join(' > ') : 'rules' }));
 
   let running = false;
@@ -139,7 +150,7 @@ async function main() {
   };
   tick();
   const timer = setInterval(tick, config.roundSeconds * 1000);
-  const stop = () => { clearInterval(timer); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 8000).unref(); };
+  const stop = () => { telegram?.stop(); clearInterval(timer); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 8000).unref(); };
   process.on('SIGTERM', stop); process.on('SIGINT', stop);
 }
 

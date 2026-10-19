@@ -138,3 +138,15 @@ Backtests replay the snapshots the scanner records (about 8 hours for up to 400 
 | `DEGEN_DATA_PATH` | `./data/degen.json` | put it on the `/data` volume |
 
 API: `GET /api/degen/state`, `GET /api/degen/token/:mint`, `GET /api/degen/chart/:mint`, `GET /api/degen/backtest?preset=fresh`, `GET /api/degen/stream` (server-sent events). `POST /api/degen/watch`, `/api/degen/wallets`, `/api/degen/presets` and `/api/degen/paper/reset` need `Authorization: Bearer <ADMIN_SECRET>`.
+
+## Pumpflip Telegram calls
+
+Set `TELEGRAM_BOT_TOKEN` in Railway (never in the repo) and every Degen Radar opportunity alert is posted to [@Pumpflip_fun](https://t.me/Pumpflip_fun) as a photo call: the token's own picture (or the bundled `public/call-card.png` when it has none), score, market cap, liquidity, entry and exit zones, rug-check result, the CA, and buttons for Jupiter, DexScreener, GMGN, pump.fun, a Stars tip and a SOL donation. Calls are spaced out and capped at `TG_CALLS_PER_HOUR`; a token is called at most once every six hours. The linked discussion chat [@Pumpflip_chat](https://t.me/Pumpflip_chat) gets the auto-forward and a welcome line for new members in the current tone.
+
+Setup in Telegram: add the bot as an admin of the channel (post messages, edit info) and of the discussion chat, then DM it `/start` from @Its_neroiq47 so it learns the owner's id.
+
+Owner commands (DM): `/status`, `/pause`, `/resume`, `/tone chill|spicy|dry`, `/describe <text>` (channel description), `/chatdesc <text>` (chat description), `/botdesc <text>`, `/welcome <text>` (`{name}` is replaced), `/stars` (bot Stars balance), `/test` (send yourself the current top setup), `/refund <user_id> <charge_id>`.
+
+Money:
+- **Stars tips** (`/tip` or the ⭐ button) are Telegram Stars invoices paid to the bot. Stars land on the bot's balance, and only the Telegram account that owns the bot in @BotFather can withdraw them (bot profile → Stars → Withdraw, through Fragment as TON, after Telegram's hold). For the money to reach @Its_neroiq47, that account must own the bot; if another account created it, transfer it in @BotFather (`/mybots` → the bot → Bot Settings → Transfer Ownership).
+- **SOL donations** (`/donate` or the 💜 button) go straight to `PROFIT_ADDRESS` through a Solana Pay page at `/donate`, from $25 worth at the live SOL price up to 10 SOL. The bot never holds a key. Telegram can't stop someone sending a different amount from their own wallet; the page and the bot only offer amounts inside the range.

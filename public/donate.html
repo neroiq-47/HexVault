@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Donate SOL · HexSyndicate</title>
+<style>
+  :root { --bg:#050407; --panel:#0e0a16; --panel-2:#161025; --line:#2a2140; --purple:#8b3dff; --gold:#e8c26a; --green:#39ff88; --text:#f4f0ff; --muted:#8f86a8; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font:16px/1.5 Inter, system-ui, sans-serif; display:flex; align-items:center; justify-content:center; padding:16px; }
+  main { width:100%; max-width:420px; background:var(--panel); border:1px solid var(--line); border-radius:16px; padding:24px; }
+  h1 { margin:0 0 4px; font-size:22px; } .muted { color:var(--muted); font-size:14px; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin:16px 0; }
+  button { flex:1; min-width:70px; background:var(--panel-2); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:10px; font:inherit; cursor:pointer; }
+  button.on { border-color:var(--purple); box-shadow:0 0 0 1px var(--purple); }
+  input { width:100%; background:var(--panel-2); color:var(--text); border:1px solid var(--line); border-radius:10px; padding:12px; font:inherit; }
+  #qr { background:#fff; border-radius:12px; padding:12px; width:220px; height:220px; margin:16px auto; display:flex; align-items:center; justify-content:center; }
+  #qr img, #qr canvas { width:196px; height:196px; image-rendering:pixelated; }
+  a.pay { display:block; text-align:center; background:var(--purple); color:#fff; text-decoration:none; border-radius:10px; padding:12px; font-weight:600; }
+  a.pay.off { opacity:.4; pointer-events:none; }
+  code { display:block; word-break:break-all; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:10px; font-size:13px; color:var(--gold); margin-top:12px; }
+  .err { color:#ff6b8b; font-size:14px; min-height:21px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Donate SOL</h1>
+  <div class="muted" id="range">Loading the live SOL price…</div>
+  <div class="row" id="presets"></div>
+  <input id="amount" type="number" step="0.001" inputmode="decimal" aria-label="Amount in SOL">
+  <div class="err" id="err"></div>
+  <div id="qr"></div>
+  <a class="pay off" id="pay" href="#">Open in wallet</a>
+  <code id="addr"></code>
+  <p class="muted">Scan with Phantom, Solflare or any Solana Pay wallet. Donations are gifts to HexSyndicate. They buy no token, no share and nothing back. Not financial advice.</p>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+(async () => {
+  const $ = id => document.getElementById(id);
+  const info = await fetch('/api/donate').then(r => r.json());
+  const min = info.minSol, max = info.maxSol;
+  $('addr').textContent = info.address;
+  $('range').textContent = min ? `From ${min} SOL (about $${info.minUsd} at $${info.solUsd.toFixed(2)}) up to ${max} SOL.` : `From $${info.minUsd} worth of SOL up to ${max} SOL.`;
+  const presets = [...new Set([min, 1, 5, max].filter(a => a && (!min || a >= min) && a <= max))];
+  for (const a of presets) { const b = document.createElement('button'); b.textContent = `${a} SOL`; b.onclick = () => { $('amount').value = a; render(); }; $('presets').append(b); }
+  const start = Number(new URLSearchParams(location.search).get('amount')) || min || 1;
+  $('amount').value = start; $('amount').min = min || 0; $('amount').max = max;
+  $('amount').oninput = render;
+  function render() {
+    const a = Number($('amount').value);
+    for (const b of $('presets').children) b.classList.toggle('on', b.textContent === `${a} SOL`);
+    const bad = !(a > 0) ? 'Enter an amount.' : min && a < min ? `The minimum is ${min} SOL (about $${info.minUsd}).` : a > max ? `The maximum is ${max} SOL.` : '';
+    $('err').textContent = bad; $('pay').classList.toggle('off', !!bad); $('qr').innerHTML = '';
+    if (bad) return;
+    const url = `solana:${info.address}?amount=${a}&label=HexSyndicate&message=${encodeURIComponent('Pumpflip donation')}`;
+    $('pay').href = url;
+    if (window.qrcode) { const q = qrcode(0, 'M'); q.addData(url); q.make(); $('qr').innerHTML = q.createImgTag(6, 0); }
+  }
+  render();
+})().catch(e => { document.getElementById('err').textContent = 'Could not load donation details.'; });
+</script>
+</body>
+</html>
