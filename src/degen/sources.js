@@ -1,5 +1,8 @@
 // Free data sources: GeckoTerminal and DexScreener for pairs, the public Solana RPC for on-chain
 // security and wallets, Reddit and 4chan /biz/ for public social posts. Every parser is pure and tested.
+// GeckoTerminal falls back to the CoinGecko onchain mirror and the RPC to backup endpoints (see ../backups.js).
+import { coingeckoUrl } from '../backups.js';
+
 const GT = 'https://api.geckoterminal.com/api/v2/networks/solana';
 const DS = 'https://api.dexscreener.com';
 export const MAINNET_RPC = 'https://api.mainnet-beta.solana.com';
@@ -101,9 +104,18 @@ export function parseMint(result) {
 
 const chunk = (a, size) => Array.from({ length: Math.ceil(a.length / size) }, (_, i) => a.slice(i * size, i * size + size));
 
-export function createSources({ net, rpcUrl = MAINNET_RPC, reddit = {}, isOnCurve = () => true }) {
-  const gt = (path, opts) => net.json('geckoterminal', GT + path, opts);
-  const rpc = (method, params, opts) => net.rpc(rpcUrl, method, params, opts);
+// coingecko: { key, base, header } from coingeckoConfig, the keyed mirror tried when GeckoTerminal refuses a call.
+// rpcBackups: RPC URLs tried in order when rpcUrl fails.
+export function createSources({ net, rpcUrl = MAINNET_RPC, rpcBackups = [], coingecko = null, reddit = {}, isOnCurve = () => true }) {
+  async function gecko(url, opts = {}) {
+    try { return await net.json('geckoterminal', url, opts); }
+    catch (e) {
+      if (!coingecko) throw e;
+      return net.json('coingecko', coingeckoUrl(url, coingecko), { ...opts, key: opts.key || url, init: { headers: { [coingecko.header]: coingecko.key } } });
+    }
+  }
+  const gt = (path, opts) => gecko(GT + path, opts);
+  const rpc = (method, params, opts) => net.rpc([rpcUrl, ...rpcBackups], method, params, opts);
   let redditToken = null;
   return {
     newPools: (page = 1) => gt(`/new_pools?page=${page}&include=base_token`, { ttlMs: 45000, parse: parseGeckoPools }),
@@ -111,7 +123,7 @@ export function createSources({ net, rpcUrl = MAINNET_RPC, reddit = {}, isOnCurv
     // When the budget or a rate limit refuses a call, the last candles fetched for the pool are still a usable chart.
     async candles(pool, agg = 5, reserve = 3) {
       const url = `${GT}/pools/${pool}/ohlcv/minute?aggregate=${agg}&limit=120&currency=usd`;
-      try { return await net.json('geckoterminal', url, { ttlMs: 120000, parse: parseCandles, reserve }); }
+      try { return await gecko(url, { ttlMs: 120000, parse: parseCandles, reserve }); }
       catch (e) { const old = net.cache.stale(url); if (old) return old; throw e; }
     },
     tokenInfo: mint => gt(`/tokens/${mint}/info`, { ttlMs: 180000, parse: parseTokenInfo, reserve: 2 }),

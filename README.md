@@ -19,7 +19,8 @@ DexScreener prices ─▶ Scout ─▶ Analyst ─▶ Risk Manager ─▶ hard l
 ```
 
 - **Method library** (`src/methods.js`): every round pulls 15-minute candles per pool from GeckoTerminal (free, no key, cached 10 min) and runs them through the `trading-signals` indicators (EMA 9/21, RSI 14, MACD, ATR 14, Bollinger 20/2, ADX 14). A regime-aware playbook (trend breakout when ADX>25, mean reversion when ADX<20, ATR stop, RSI exits, no chasing) is given to every agent with each token's reading, and the rule fallback trades the same playbook.
-- **Agents** ask Claude (`ANTHROPIC_API_KEY`). If Claude fails (no credits, outage, bad JSON) they try free backups in order: Google Gemini 2.5 Flash (`GEMINI_API_KEY`, free key at aistudio.google.com/apikey) then Groq GPT-OSS 120B (`GROQ_API_KEY`, free key at console.groq.com/keys). A provider that fails sits out for 10 minutes. If every provider fails, each agent uses built-in rules. Override models with `GEMINI_MODEL` / `GROQ_MODEL`.
+- **Agents** ask Claude (`ANTHROPIC_API_KEY`). If Claude fails (no credits, outage, bad JSON) they try free backups in order: Google Gemini 2.5 Flash (`GEMINI_API_KEY`, free key at aistudio.google.com/apikey) then Groq GPT-OSS 120B (`GROQ_API_KEY`, free key at console.groq.com/keys), OpenRouter (`OPENROUTER_API_KEY`, free GPT-OSS 120B) and Cerebras (`CEREBRAS_API_KEY`). A provider that fails sits out for 10 minutes. If every provider fails, each agent uses built-in rules. Override models with `GEMINI_MODEL` / `GROQ_MODEL` / `OPENROUTER_MODEL` / `CEREBRAS_MODEL`.
+- **Backup data APIs.** Desk prices fall back from DexScreener to Jupiter's Price API. GeckoTerminal calls (desk candles, Degen Radar discovery, charts and token info) fall back to CoinGecko's onchain API when `COINGECKO_API_KEY` is set (free demo key; `COINGECKO_PLAN=pro` for paid). Degen Radar's RPC calls fall back to `DEGEN_RPC_BACKUPS`, or public endpoints when it is empty. Backups show on the Degen Radar source health panel.
 - **Hard limits** run after the Risk agent, so nothing an agent says can bypass them: pools under $100k liquidity are refused, each buy is capped (5/10/15% of equity for low/med/high risk), open positions are capped (2/3/4), and buys stop for the day after a 3/5/8% loss.
 - **Paper fills** pay 0.3% on every trade, so results are not flattered.
 - **Profit sweep** runs at most once a day. Only cash above the starting float plus a 0.02 SOL reserve leaves, and only to the allow-listed address (`src/config.js`). In paper mode with a devnet wallet it sends the matching devnet SOL; in shadow mode it is a record only. If a send fails, the profit stays in the book.
@@ -77,7 +78,7 @@ The Dockerfile is used automatically.
 
 | Setting | Value | Why |
 | --- | --- | --- |
-| Variables | `AGENT_WALLET_SECRET`, `ADMIN_SECRET` (24+ chars), `ANTHROPIC_API_KEY`, optional `GEMINI_API_KEY`, `GROQ_API_KEY` | wallet, kill switch, agent brains and free backups |
+| Variables | `AGENT_WALLET_SECRET`, `ADMIN_SECRET` (24+ chars), `ANTHROPIC_API_KEY`, optional `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `CEREBRAS_API_KEY`, `COINGECKO_API_KEY` | wallet, kill switch, agent brains and free backups |
 | | `TRADING_MODE`, `FLOAT_SOL`, `JUPITER_API_KEY` | shadow and live need all three, plus `AGENT_WALLET_SECRET` |
 | | `SOLANA_RPC_URL` | a Helius mainnet URL for shadow and live |
 | | `DATA_PATH=/data/state.json`, `RAILWAY_RUN_UID=0` | keep the paper book on a volume; the image runs as non-root |

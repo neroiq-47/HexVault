@@ -2,7 +2,7 @@ import http from 'node:http';
 import { readFileSync } from 'node:fs';
 import { timingSafeEqual } from 'node:crypto';
 import { loadConfig } from './config.js';
-import { fetchMarket } from './market.js';
+import { createMarketFeed } from './market.js';
 import { makeBrain } from './agents.js';
 import { makeSignalSource } from './methods.js';
 import { loadKeypair, connect } from './wallet.js';
@@ -106,7 +106,8 @@ async function main() {
     if (armed) executors.live = createExecutor({ mode: 'live', jupiter, connection: wallet.connection, keypair, log });
   }
   const mode = armed ? (saved?.liveOn ? 'live' : 'shadow') : config.mode;
-  const attachSignals = makeSignalSource();
+  const attachSignals = makeSignalSource({ coingecko: config.coingecko });
+  const fetchMarket = createMarketFeed({ jupiterKey: config.jupiterKey, log });
   const marketWithSignals = async () => attachSignals(await fetchMarket());
   const desk = createDesk({ config, fetchMarket: marketWithSignals, brain, wallet, executors, mode, log });
   if (saved?.book) desk.state.book = saved.book;

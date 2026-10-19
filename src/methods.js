@@ -1,6 +1,7 @@
 // Trading method library: 15-minute candles from GeckoTerminal (free, no key) run through the
 // trading-signals indicators, then a regime-aware playbook turns them into one signal per token.
 import { ADX, ATR, BollingerBands, EMA, MACD, RSI } from 'trading-signals';
+import { coingeckoUrl } from './backups.js';
 
 export const METHOD_LIBRARY = `Method library (use these, cite the method name in your reason):
 1. Regime first. ADX>25 = trending, ADX<20 = ranging, between = mixed: trade smaller or stand aside.
@@ -11,12 +12,25 @@ export const METHOD_LIBRARY = `Method library (use these, cite the method name i
 
 const GECKO = 'https://api.geckoterminal.com/api/v2/networks/solana/pools';
 
-export async function fetchCandles(pool, fetchImpl = fetch) {
-  const res = await fetchImpl(`${GECKO}/${pool}/ohlcv/minute?aggregate=15&limit=100&currency=usd`, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(15000) });
-  if (!res.ok) throw new Error(`GeckoTerminal HTTP ${res.status}`);
-  const list = (await res.json())?.data?.attributes?.ohlcv_list;
+const parseOhlcv = body => {
+  const list = body?.data?.attributes?.ohlcv_list;
   if (!Array.isArray(list)) throw new Error('GeckoTerminal returned an unexpected shape');
   return list.map(([t, o, h, l, c, v]) => ({ t, o: +o, h: +h, l: +l, c: +c, v: +v })).filter(k => k.c > 0).sort((a, b) => a.t - b.t);
+};
+
+// GeckoTerminal first; with a CoinGecko key (coingeckoConfig) the same request goes to the CoinGecko mirror when it fails.
+export async function fetchCandles(pool, fetchImpl = fetch, coingecko = null) {
+  const url = `${GECKO}/${pool}/ohlcv/minute?aggregate=15&limit=100&currency=usd`;
+  const get = async (u, headers, label) => {
+    const res = await fetchImpl(u, { headers: { accept: 'application/json', ...headers }, signal: AbortSignal.timeout(15000) });
+    if (!res.ok) throw new Error(`${label} HTTP ${res.status}`);
+    return parseOhlcv(await res.json());
+  };
+  try { return await get(url, {}, 'GeckoTerminal'); }
+  catch (e) {
+    if (!coingecko) throw e;
+    return get(coingeckoUrl(url, coingecko), { [coingecko.header]: coingecko.key }, 'CoinGecko');
+  }
 }
 
 export const pct = (a, b) => +((a / b - 1) * 100).toFixed(2);
@@ -64,7 +78,7 @@ export function methodSignal(s, token, held) {
 
 // Candles change every 15 minutes, so each pool is fetched at most once per 10 minutes.
 // Calls are spaced out to stay inside GeckoTerminal's free rate limit.
-export function makeSignalSource({ fetchImpl = fetch, ttlMs = 10 * 60 * 1000, gapMs = 2500, now = Date.now, sleep = ms => new Promise(r => setTimeout(r, ms)) } = {}) {
+export function makeSignalSource({ fetchImpl = fetch, coingecko = null, ttlMs = 10 * 60 * 1000, gapMs = 2500, now = Date.now, sleep = ms => new Promise(r => setTimeout(r, ms)) } = {}) {
   const cache = {};
   return async function attach(market) {
     let first = true;
@@ -74,7 +88,7 @@ export function makeSignalSource({ fetchImpl = fetch, ttlMs = 10 * 60 * 1000, ga
       if (!hit || now() - hit.at > ttlMs) {
         if (!first) await sleep(gapMs);
         first = false;
-        try { cache[t.pool] = { at: now(), sig: computeSignals(await fetchCandles(t.pool, fetchImpl)) }; }
+        try { cache[t.pool] = { at: now(), sig: computeSignals(await fetchCandles(t.pool, fetchImpl, coingecko)) }; }
         catch { if (!hit) cache[t.pool] = { at: now() - ttlMs / 2, sig: null }; }
       }
       if (cache[t.pool].sig) t.ind = cache[t.pool].sig;

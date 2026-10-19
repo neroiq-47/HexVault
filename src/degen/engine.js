@@ -2,6 +2,7 @@
 // adds social and smart-money context, scores them, raises alerts and paper-trades the strongest setups.
 import { createNet } from './net.js';
 import { createSources, MAINNET_RPC } from './sources.js';
+import { coingeckoConfig, rpcBackups, PUBLIC_RPC_BACKUPS } from '../backups.js';
 import { DEFAULT_PRESETS, mergeTokens, features, matchPreset, createHistory, toRow, validatePresets } from './scanner.js';
 import { assessSecurity } from './security.js';
 import { flagPosts, matchMentions, socialMomentum, narratives, CHANNELS } from './social.js';
@@ -16,11 +17,14 @@ export const SUBREDDITS = ['solana', 'SolanaMemeCoins', 'memecoins', 'CryptoMoon
 const isAddr = s => typeof s === 'string' && /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(s);
 
 export function degenConfig(env = process.env, base = {}) {
+  const rpcUrl = (env.DEGEN_RPC_URL || '').trim() || (base.cluster === 'mainnet-beta' && base.rpcUrl) || MAINNET_RPC;
   const wallets = (env.DEGEN_WALLETS || '').split(',').map(s => s.trim()).filter(Boolean).map(s => { const [address, label] = s.split(':'); return { address, label: label || address.slice(0, 4) }; }).filter(w => isAddr(w.address));
   return {
     enabled: (env.DEGEN || 'on').trim() !== 'off',
     scanMs: Math.max(30, Number(env.DEGEN_SCAN_SECONDS) || 60) * 1000,
-    rpcUrl: (env.DEGEN_RPC_URL || '').trim() || (base.cluster === 'mainnet-beta' && base.rpcUrl) || MAINNET_RPC,
+    rpcUrl,
+    rpcBackups: rpcBackups(env.DEGEN_RPC_BACKUPS, rpcUrl, [...PUBLIC_RPC_BACKUPS, MAINNET_RPC]),
+    coingecko: coingeckoConfig(env),
     wallets, alertScore: Number(env.DEGEN_ALERT_SCORE) || 70,
     paperUsd: Number(env.DEGEN_PAPER_USD) || 1000, paperSizeUsd: Number(env.DEGEN_PAPER_SIZE_USD) || 100, paperMaxPos: Number(env.DEGEN_PAPER_MAX_POSITIONS) || 5,
     securityPerCycle: Number(env.DEGEN_SECURITY_PER_CYCLE) || 8,
@@ -33,7 +37,7 @@ export function degenConfig(env = process.env, base = {}) {
 
 export function createDegen({ config, fetchImpl = fetch, now = Date.now, log = () => {}, brain = null, isOnCurve, sleep, saved = null, onCall = null }) {
   const net = createNet({ fetchImpl, now, sleep });
-  const sources = createSources({ net, rpcUrl: config.rpcUrl, reddit: config.reddit, isOnCurve });
+  const sources = createSources({ net, rpcUrl: config.rpcUrl, rpcBackups: config.rpcBackups || [], coingecko: config.coingecko || null, reddit: config.reddit, isOnCurve });
   const history = createHistory();
   const s = {
     presets: structuredClone(DEFAULT_PRESETS), watchlist: [], wallets: {}, book: newBook(config.paperUsd), alerts: [], devStart: {},
@@ -229,7 +233,7 @@ export function createDegen({ config, fetchImpl = fetch, now = Date.now, log = (
       linkedWallets: s.linked, narratives: s.narratives, ai: s.ai.takes.length ? { takes: s.ai.takes, at: s.ai.at, via: s.ai.via } : null,
       social: { channels: { ...Object.fromEntries(Object.entries(s.socialStatus)), X: { ok: false, error: CHANNELS.x }, Telegram: { ok: false, error: CHANNELS.telegram } }, posts: s.posts.length,
         flagged: s.posts.filter(p => p.bot >= 0.5).length },
-      sources: Object.fromEntries(Object.entries(net.health).map(([k, h]) => [k, { label: h.label, ok: h.ok, errors: h.errors, cacheHits: h.cacheHits, lastOk: h.lastOk, lastError: h.lastError }])),
+      sources: Object.fromEntries(Object.entries(net.health).filter(([k]) => k !== 'coingecko' || config.coingecko).map(([k, h]) => [k, { label: h.label, ok: h.ok, errors: h.errors, cacheHits: h.cacheHits, lastOk: h.lastOk, lastError: h.lastError }])),
     };
   }
 
