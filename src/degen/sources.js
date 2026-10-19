@@ -108,7 +108,12 @@ export function createSources({ net, rpcUrl = MAINNET_RPC, reddit = {}, isOnCurv
   return {
     newPools: (page = 1) => gt(`/new_pools?page=${page}&include=base_token`, { ttlMs: 45000, parse: parseGeckoPools }),
     trendingPools: (page = 1) => gt(`/trending_pools?page=${page}&include=base_token&duration=1h`, { ttlMs: 90000, parse: parseGeckoPools }),
-    candles: (pool, agg = 5, reserve = 3) => gt(`/pools/${pool}/ohlcv/minute?aggregate=${agg}&limit=120&currency=usd`, { ttlMs: 120000, parse: parseCandles, reserve }),
+    // When the budget or a rate limit refuses a call, the last candles fetched for the pool are still a usable chart.
+    async candles(pool, agg = 5, reserve = 3) {
+      const url = `${GT}/pools/${pool}/ohlcv/minute?aggregate=${agg}&limit=120&currency=usd`;
+      try { return await net.json('geckoterminal', url, { ttlMs: 120000, parse: parseCandles, reserve }); }
+      catch (e) { const old = net.cache.stale(url); if (old) return old; throw e; }
+    },
     tokenInfo: mint => gt(`/tokens/${mint}/info`, { ttlMs: 180000, parse: parseTokenInfo, reserve: 2 }),
     async dexTokens(mints) {
       const out = [], parts = chunk([...new Set(mints)], 30);

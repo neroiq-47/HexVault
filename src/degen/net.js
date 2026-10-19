@@ -50,8 +50,9 @@ export function createCache({ now = Date.now, max = 5000 } = {}) {
 // Free-tier budgets, kept under each provider's published limit.
 export const SOURCES = {
   dexscreener: { perMinute: 55, label: 'DexScreener' },
-  // The agent desk also pulls GeckoTerminal candles from the same IP, so this stays well under its 30/min.
-  geckoterminal: { perMinute: 15, label: 'GeckoTerminal' },
+  // GeckoTerminal answered 429 at 15/min in production, and the agent desk pulls its 15m candles from the same IP,
+  // so the scanner stays at 8/min. A 429 pauses every GeckoTerminal call for a minute, discovery included.
+  geckoterminal: { perMinute: 8, label: 'GeckoTerminal' },
   rpc: { perMinute: 200, label: 'Solana RPC' },
   reddit: { perMinute: 20, label: 'Reddit' },
   fourchan: { perMinute: 20, label: '4chan /biz/' },

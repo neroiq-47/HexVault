@@ -55,3 +55,16 @@ test('the donation endpoints are off unless DONATIONS=on', async () => {
   assert.equal(on.state.donations.totalSol, 1);
   assert.equal(on.state.donations.enabled, true);
 });
+
+test('HEAD requests are answered like GET, without a body', async () => {
+  const config = loadConfig({});
+  const desk = createDesk({ config, fetchMarket: async () => ({ at: 0, tokens: [] }), brain: null });
+  const server = createServer({ desk, config, wallet: null, persist: async () => {} }).listen(0);
+  try {
+    for (const path of ['/', '/health']) {
+      const res = await fetch(`http://127.0.0.1:${server.address().port}${path}`, { method: 'HEAD' });
+      assert.equal(res.status, 200, path);
+      assert.equal(await res.text(), '');
+    }
+  } finally { server.close(); }
+});
