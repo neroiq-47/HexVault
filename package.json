@@ -10,7 +10,7 @@
     "wallet:new": "node src/cli.js wallet-new",
     "airdrop": "node src/cli.js airdrop",
     "test": "node --test",
-    "check": "for f in src/*.js; do node --check \"$f\" || exit 1; done"
+    "check": "for f in src/*.js src/degen/*.js; do node --check \"$f\" || exit 1; done"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",

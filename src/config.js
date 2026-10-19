@@ -32,6 +32,8 @@ export function loadConfig(env = process.env) {
     backups: [
       { name: 'gemini', key: (env.GEMINI_API_KEY || '').trim(), model: env.GEMINI_MODEL || undefined },
       { name: 'groq', key: (env.GROQ_API_KEY || '').trim(), model: env.GROQ_MODEL || undefined },
+      // A local open-source model through Ollama's OpenAI-compatible endpoint; it needs no key.
+      { name: 'ollama', key: (env.OLLAMA_URL || '').trim() ? 'ollama' : '', url: (env.OLLAMA_URL || '').trim().replace(/\/$/, '') + '/v1/chat/completions', model: env.OLLAMA_MODEL || undefined },
     ].filter(b => b.key),
     roundSeconds: Math.max(60, Number(env.ROUND_SECONDS) || 300),
     startUsd: Number(env.START_USD) || 100,
