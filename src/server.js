@@ -116,7 +116,7 @@ async function main() {
   const telegram = tcfg.enabled ? createTelegram({ config: tcfg, log, saved: await loadState(tcfg.dataPath).catch(() => null), persist: st => saveState(tcfg.dataPath, st) }) : null;
   if (telegram) telegram.start().catch(e => log('error', 'telegram bot failed to start', { message: String(e.message || e) }));
 
-  // Axiom Degen scanner: paper trading and alerts only, on its own loop and its own state file.
+  // Degen Radar scanner: paper trading and alerts only, on its own loop and its own state file.
   const dcfg = degenConfig(process.env, config);
   let degenRoutes = null;
   if (dcfg.enabled) {
