@@ -246,7 +246,7 @@ export function createDegen({ config, fetchImpl = fetch, now = Date.now, log = (
 
   return {
     state: s, history, sources, cycle, view, token,
-    candles: async mint => { const r = s.rows.find(x => x.mint === mint); if (!r?.pool) return null; return sources.candles(r.pool, 5, 2); },
+    candles: async mint => { const r = s.rows.find(x => x.mint === mint); if (!r?.pool) return null; return sources.candles(r.pool, 5, 0); },
     backtest: name => { const p = s.presets[name]; if (!p) return null; return { preset: name, ...backtest(history.series, p, { sizeUsd: config.paperSizeUsd }) }; },
     setPresets(p) { s.presets = validatePresets(p); return s.presets; },
     watch(mint, on) { if (!isAddr(mint)) throw new Error('not a Solana address'); s.watchlist = s.watchlist.filter(m => m !== mint); if (on) s.watchlist.unshift(mint); s.watchlist = s.watchlist.slice(0, 50); return s.watchlist; },

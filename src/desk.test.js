@@ -79,3 +79,15 @@ test('kill switch closes positions and halts trading', async () => {
   await desk.cycle();
   assert.equal(desk.state.book.rounds, 0);
 });
+
+test('paper profit on mainnet is recorded but never sent', async () => {
+  const { loadKeypair, newKeypair } = await import('./wallet.js');
+  const sent = [];
+  const wallet = { keypair: loadKeypair(newKeypair().secret), connection: { getBalance: async () => 5e9 }, send: async (_c, tx) => { sent.push(tx); return 'sig1'; } };
+  const desk = createDesk({ config: loadConfig({ SOLANA_CLUSTER: 'mainnet-beta' }), fetchMarket, brain: null, wallet });
+  await desk.refresh();
+  desk.state.book.cash = 120;
+  const r = await desk.sweep(Date.now());
+  assert.equal(r.status, 'paper');
+  assert.equal(sent.length, 0);
+});

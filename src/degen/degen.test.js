@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createLimiter, createCache, createNet, BudgetError } from './net.js';
-import { parseGeckoPools, parseDexPairs, parseMint, parseTokenInfo, parseReddit, parseBizCatalog, TOKEN_2022 } from './sources.js';
+import { parseGeckoPools, parseDexPairs, parseMint, parseTokenInfo, parseReddit, parseBizCatalog, TOKEN_2022, createSources } from './sources.js';
 import { mergeTokens, features, matchPreset, DEFAULT_PRESETS, createHistory, toRow, tokenFromRow, validatePresets } from './scanner.js';
 import { assessSecurity } from './security.js';
 import { sentiment, shillScore, flagPosts, matchMentions, socialMomentum, narratives } from './social.js';
@@ -303,4 +303,17 @@ test('degen config reads tracked wallets and defaults to the mainnet RPC on a de
   assert.deepEqual(c.wallets, [{ address: W, label: 'whale' }]);
   assert.equal(c.rpcUrl, 'https://api.mainnet-beta.solana.com');
   assert.equal(degenConfig({ DEGEN: 'off' }).enabled, false);
+});
+
+test('a chart falls back to the last candles when GeckoTerminal is rate limited', async () => {
+  let t = 0, calls = 0;
+  const body = { data: { attributes: { ohlcv_list: [[60, 1, 2, 0.5, 1.5, 10], [0, 1, 1, 1, 1, 5]] } } };
+  const fetchImpl = async () => { calls++; return calls === 1 ? { ok: true, status: 200, json: async () => body } : { ok: false, status: 429, json: async () => ({}) }; };
+  const net = createNet({ fetchImpl, now: () => t, sleep: async () => {} });
+  const sources = createSources({ net });
+  const first = await sources.candles('POOL', 5, 0);
+  assert.deepEqual(first.map(k => k.t), [0, 60]);
+  t = 10 * 60000; // the cache has expired and the next call is refused
+  assert.deepEqual(await sources.candles('POOL', 5, 0), first);
+  assert.equal(calls, 2);
 });

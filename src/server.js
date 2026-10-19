@@ -52,6 +52,8 @@ function authorised(req, secret) {
 export function createServer({ desk, config, wallet, persist, degenRoutes, telegram = null }) {
   return http.createServer(async (req, res) => {
     const send = (code, body) => { res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(body)); };
+    // HEAD is answered as a GET; Node drops the body itself. Uptime monitors, link previews and scanners use it.
+    if (req.method === 'HEAD') req.method = 'GET';
     try {
       if (degenRoutes && await degenRoutes.handle(req, res, send)) return;
       if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer' }); return res.end(SITE); }
@@ -118,12 +120,12 @@ async function main() {
 
   // Degen Radar scanner: paper trading and alerts only, on its own loop and its own state file.
   const dcfg = degenConfig(process.env, config);
-  let degenRoutes = null;
+  let degenRoutes = null, persistDegen = null;
   if (dcfg.enabled) {
     const isOnCurve = a => { try { return PublicKey.isOnCurve(new PublicKey(a).toBytes()); } catch { return true; } };
     const degen = createDegen({ config: dcfg, log, brain, isOnCurve, saved: await loadState(dcfg.dataPath).catch(() => null), onCall: telegram ? (a, r) => telegram.postCall(a, r) : null });
     telegram?.attach(degen);
-    const persistDegen = () => saveState(dcfg.dataPath, degen.toJSON());
+    persistDegen = () => saveState(dcfg.dataPath, degen.toJSON());
     degenRoutes = createDegenRoutes({ degen, authorised: req => authorised(req, config.adminSecret), readJson, persist: persistDegen });
     let busy = false;
     const scan = async () => {
@@ -150,7 +152,12 @@ async function main() {
   };
   tick();
   const timer = setInterval(tick, config.roundSeconds * 1000);
-  const stop = () => { telegram?.stop(); clearInterval(timer); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 8000).unref(); };
+  // Railway sends SIGTERM on every redeploy. The degen book only saves every few scans, so save everything on the way out.
+  const stop = async () => {
+    telegram?.stop(); clearInterval(timer); setTimeout(() => process.exit(0), 8000).unref();
+    await Promise.allSettled([persist(), persistDegen?.()]);
+    server.close(() => process.exit(0));
+  };
   process.on('SIGTERM', stop); process.on('SIGINT', stop);
 }
 

@@ -65,7 +65,8 @@ export function createDesk({ config, fetchMarket, brain, wallet, executor, execu
       record.usd = sweepableUsd(book, market);
       if (record.usd < MIN_SWEEP_USD) return null;
       record.sol = record.usd / solPx;
-      if (wallet && state.mode === 'paper') await sendProfit(record); else record.status = 'paper';
+      // Paper profit is imaginary, so it only moves test SOL. On mainnet it is recorded and never sent.
+      if (wallet && state.mode === 'paper' && config.cluster !== 'mainnet-beta') await sendProfit(record); else record.status = 'paper';
       if (record.status !== 'failed') book.cash -= record.usd;
     }
     book.sweeps.push(record);
