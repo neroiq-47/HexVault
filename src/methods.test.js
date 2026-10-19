@@ -70,3 +70,11 @@ test('rule fallback trades the playbook when indicators exist', () => {
   assert.equal(proposals[0].action, 'buy');
   assert.match(proposals[0].reason, /trend-breakout/);
 });
+
+test('smart money: distributing wallets veto a buy and exit a held position', () => {
+  const s = { ...computeSignals(trend), rsi: 62, macdHist: 0.05 };
+  const dumping = { m5: 0.1, smart: { state: 'distributing', sellers: 3, buyers: 0 } };
+  assert.equal(methodSignal(s, dumping, null).action, 'hold');
+  assert.equal(methodSignal(s, dumping, { entry: s.close }).action, 'sell');
+  assert.match(methodSignal(s, { m5: 0.1, smart: { state: 'accumulating' } }, null).reason, /smart money buying/);
+});

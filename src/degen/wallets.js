@@ -91,6 +91,22 @@ export function smartSignal(mint, wallets, since) {
   return { value: +Math.min(1, s).toFixed(2), wallets: who };
 }
 
+// What the tracked wallets did in one token, both directions, for the desk agents. null when no wallets are tracked.
+export function smartFlow(mint, wallets, since) {
+  const list = Object.values(wallets);
+  if (!list.length) return null;
+  let buyers = 0, sellers = 0, netSol = 0;
+  for (const w of list) {
+    const f = flows(w.trades || [], since).find(x => x.mint === mint);
+    if (!f) continue;
+    netSol += f.netSol;
+    if (f.netSol > 0) buyers++; else if (f.netSol < 0) sellers++;
+  }
+  const signal = smartSignal(mint, wallets, since);
+  return { wallets: list.length, buyers, sellers, netSol: +netSol.toFixed(3), value: signal.value,
+    state: buyers > sellers ? 'accumulating' : sellers > buyers ? 'distributing' : buyers ? 'mixed' : 'quiet' };
+}
+
 // Pulls new signatures for each wallet and parses up to maxTx transactions per refresh, oldest first.
 export async function refreshWallets({ sources, wallets, maxTx = 30, solUsd, now = Date.now(), log = () => {} }) {
   let budget = maxTx;

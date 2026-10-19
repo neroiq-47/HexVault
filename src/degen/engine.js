@@ -6,7 +6,7 @@ import { coingeckoConfig, rpcBackups, PUBLIC_RPC_BACKUPS } from '../backups.js';
 import { DEFAULT_PRESETS, mergeTokens, features, matchPreset, createHistory, toRow, validatePresets } from './scanner.js';
 import { assessSecurity } from './security.js';
 import { flagPosts, matchMentions, socialMomentum, narratives, CHANNELS } from './social.js';
-import { refreshWallets, smartSignal, flows, linkedWallets } from './wallets.js';
+import { refreshWallets, smartSignal, smartFlow, flows, linkedWallets } from './wallets.js';
 import { degenScore, zones } from './score.js';
 import { newBook, openTrade, manage, bookStats } from './paper.js';
 import { backtest } from './backtest.js';
@@ -250,6 +250,7 @@ export function createDegen({ config, fetchImpl = fetch, now = Date.now, log = (
 
   return {
     state: s, history, sources, cycle, view, token,
+    smartFlow: (mint, hours = 24) => smartFlow(mint, s.wallets, now() - hours * 60 * MIN),
     candles: async mint => { const r = s.rows.find(x => x.mint === mint); if (!r?.pool) return null; return sources.candles(r.pool, 5, 0); },
     backtest: name => { const p = s.presets[name]; if (!p) return null; return { preset: name, ...backtest(history.series, p, { sizeUsd: config.paperSizeUsd }) }; },
     setPresets(p) { s.presets = validatePresets(p); return s.presets; },

@@ -8,7 +8,8 @@ export const METHOD_LIBRARY = `Method library (use these, cite the method name i
 2. Trend breakout (trending only): EMA9 above EMA21, price above EMA21, RSI 50-70, MACD histogram above 0, volume rising. Buy with the trend.
 3. Mean reversion (ranging only): price at or below the lower Bollinger band or RSI under 30, while the 6h trend is not collapsing. Small size, target the middle band.
 4. Exits: sell when RSI is above 75, when price closes under EMA21 in a trend trade, or when price falls 2x ATR below entry (ATR stop).
-5. Never chase: skip buys after a 5m move larger than 2x ATR, and skip tokens with no indicator data.`;
+5. Never chase: skip buys after a 5m move larger than 2x ATR, and skip tokens with no indicator data.
+6. Smart money: smartMoney24h is what the tracked wallets did in the token over 24h. Accumulating confirms a buy setup; distributing vetoes new buys and is a reason to exit a held position. Quiet or untracked is neutral.`;
 
 const GECKO = 'https://api.geckoterminal.com/api/v2/networks/solana/pools';
 
@@ -60,6 +61,8 @@ export function computeSignals(candles) {
 // The playbook in code, so the rule fallback trades the same methods the AI is told to use.
 export function methodSignal(s, token, held) {
   if (!s) return { method: 'none', action: 'hold', reason: 'no indicator data' };
+  const dumping = token?.smart?.state === 'distributing';
+  if (held && dumping) return { method: 'smart-money', action: 'sell', reason: `${token.smart.sellers} tracked wallets selling` };
   if (held) {
     const atrStop = held.entry * (1 - 2 * s.atrPct / 100);
     if (s.rsi > 75) return { method: 'exit', action: 'sell', reason: `RSI ${s.rsi} overbought` };
@@ -68,9 +71,10 @@ export function methodSignal(s, token, held) {
     return { method: 'hold', action: 'hold', reason: 'position still valid' };
   }
   if (Math.abs(token?.m5 || 0) > 2 * s.atrPct) return { method: 'no-chase', action: 'hold', reason: '5m move over 2x ATR' };
+  if (dumping) return { method: 'smart-money', action: 'hold', reason: 'tracked wallets are selling' };
   const up = s.ema9 > s.ema21 && s.close > s.ema21;
   if (s.regime === 'trending' && up && s.rsi >= 50 && s.rsi <= 70 && s.macdHist > 0 && s.volTrend > 1)
-    return { method: 'trend-breakout', action: 'buy', size: 1, reason: `ADX ${s.adx}, RSI ${s.rsi}, MACD up, volume ${s.volTrend}x` };
+    return { method: 'trend-breakout', action: 'buy', size: 1, reason: `ADX ${s.adx}, RSI ${s.rsi}, MACD up, volume ${s.volTrend}x${token?.smart?.state === 'accumulating' ? ', smart money buying' : ''}` };
   if (s.regime === 'ranging' && (s.close <= s.bbLower || s.rsi < 30) && (token?.h6 ?? 0) > -5)
     return { method: 'mean-reversion', action: 'buy', size: 0.5, reason: `ranging, RSI ${s.rsi}, at lower band` };
   return { method: 'wait', action: 'hold', reason: `${s.regime}, no setup` };

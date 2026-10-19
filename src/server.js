@@ -108,7 +108,10 @@ async function main() {
   const mode = armed ? (saved?.liveOn ? 'live' : 'shadow') : config.mode;
   const attachSignals = makeSignalSource({ coingecko: config.coingecko });
   const fetchMarket = createMarketFeed({ jupiterKey: config.jupiterKey, log });
-  const marketWithSignals = async () => attachSignals(await fetchMarket());
+  // The Degen Radar's smart-money tracker feeds the desk agents too, once the scanner is up.
+  let degen = null;
+  const attachSmart = market => { if (degen) for (const t of market.tokens) t.smart = degen.smartFlow(t.mint); return market; };
+  const marketWithSignals = async () => attachSmart(await attachSignals(await fetchMarket()));
   const desk = createDesk({ config, fetchMarket: marketWithSignals, brain, wallet, executors, mode, log });
   if (saved?.book) desk.state.book = saved.book;
   if (saved?.deposits) desk.state.deposits = saved.deposits;
@@ -124,7 +127,7 @@ async function main() {
   let degenRoutes = null, persistDegen = null;
   if (dcfg.enabled) {
     const isOnCurve = a => { try { return PublicKey.isOnCurve(new PublicKey(a).toBytes()); } catch { return true; } };
-    const degen = createDegen({ config: dcfg, log, brain, isOnCurve, saved: await loadState(dcfg.dataPath).catch(() => null), onCall: telegram ? (a, r) => telegram.postCall(a, r) : null });
+    degen = createDegen({ config: dcfg, log, brain, isOnCurve, saved: await loadState(dcfg.dataPath).catch(() => null), onCall: telegram ? (a, r) => telegram.postCall(a, r) : null });
     telegram?.attach(degen);
     persistDegen = () => saveState(dcfg.dataPath, degen.toJSON());
     degenRoutes = createDegenRoutes({ degen, authorised: req => authorised(req, config.adminSecret), readJson, persist: persistDegen });
