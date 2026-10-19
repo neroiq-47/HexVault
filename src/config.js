@@ -1,3 +1,5 @@
+import { coingeckoConfig } from './backups.js';
+
 // Runtime configuration. TRADING_MODE decides whether trades are paper, shadow (real quotes, nothing sent) or live.
 export const ALLOWED_DESTINATIONS = Object.freeze(['5qmsMSPXoTWDfsEDLoo15ywoPLSiKB7zqRGR9dSVfQTA']);
 const CLUSTERS = { devnet: 'https://api.devnet.solana.com', testnet: 'https://api.testnet.solana.com', 'mainnet-beta': 'https://api.mainnet-beta.solana.com' };
@@ -32,9 +34,12 @@ export function loadConfig(env = process.env) {
     backups: [
       { name: 'gemini', key: (env.GEMINI_API_KEY || '').trim(), model: env.GEMINI_MODEL || undefined },
       { name: 'groq', key: (env.GROQ_API_KEY || '').trim(), model: env.GROQ_MODEL || undefined },
+      { name: 'openrouter', key: (env.OPENROUTER_API_KEY || '').trim(), model: env.OPENROUTER_MODEL || undefined },
+      { name: 'cerebras', key: (env.CEREBRAS_API_KEY || '').trim(), model: env.CEREBRAS_MODEL || undefined },
       // A local open-source model through Ollama's OpenAI-compatible endpoint; it needs no key.
       { name: 'ollama', key: (env.OLLAMA_URL || '').trim() ? 'ollama' : '', url: (env.OLLAMA_URL || '').trim().replace(/\/$/, '') + '/v1/chat/completions', model: env.OLLAMA_MODEL || undefined },
     ].filter(b => b.key),
+    coingecko: coingeckoConfig(env),
     roundSeconds: Math.max(60, Number(env.ROUND_SECONDS) || 300),
     startUsd: Number(env.START_USD) || 100,
     maxDrawdown: Math.min(0.5, Math.max(0.05, Number(env.MAX_DRAWDOWN) || 0.2)),
