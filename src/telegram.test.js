@@ -40,8 +40,10 @@ test('donation limits turn $25 into SOL at the live price and cap at 10 SOL', ()
 test('call caption escapes token text and carries the numbers, CA and fine print', () => {
   const c = callCaption(ROW);
   assert.match(c, /\$GOOD<\/b> · Good &lt;Dog&gt;/);
-  assert.match(c, /MC \$210\.0K · Liq \$40\.0K/);
-  assert.match(c, /Entry \$0\.00110 to \$0\.00120/);
+  assert.match(c, /Score <b>82\/100<\/b> · Rug check ✅ passed/);
+  assert.match(c, /💰 MC <b>\$210\.0K<\/b>\n💧 Liquidity <b>\$40\.0K<\/b>/);
+  assert.match(c, /🎯 Entry <b>\$0\.00110 – \$0\.00120<\/b>\n🛑 Stop <b>\$0\.000900<\/b>\n✅ Target <b>\$0\.00160<\/b>/);
+  assert.ok(c.split('\n').every(l => l.replace(/<[^>]+>/g, '').length <= 48), 'every line fits a phone screen');
   assert.match(c, new RegExp(`<code>${MINT}</code>`));
   assert.match(c, /Not financial advice/);
   assert.doesNotMatch(c, /moon|🚀|guarantee/i);
@@ -51,7 +53,7 @@ test('call caption escapes token text and carries the numbers, CA and fine print
 test('call buttons link to buy, chart and the bot tip and donate flows', () => {
   const kb = callButtons(ROW, { botUsername: 'PumpflipBot' }).inline_keyboard.flat();
   assert.ok(kb.find(b => b.url === `https://jup.ag/swap/SOL-${MINT}`));
-  assert.ok(kb.find(b => b.url === `https://pump.fun/coin/${MINT}`));
+  assert.equal(kb.length, 4);
   assert.ok(kb.find(b => b.url === 'https://t.me/PumpflipBot?start=tip'));
   assert.ok(kb.find(b => b.url === 'https://t.me/PumpflipBot?start=donate'));
   assert.ok(kb.every(b => b.url.startsWith('https://')));
