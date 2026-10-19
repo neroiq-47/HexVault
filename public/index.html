@@ -127,6 +127,10 @@ input{padding:9px 10px;width:100%}
 .qr{background:#fff;border-radius:12px;padding:8px;width:156px;height:156px;display:grid;place-items:center;box-shadow:0 0 0 1px var(--gold),0 0 30px -6px rgba(212,175,55,.6)}
 .qr svg,.qr img{width:140px;height:140px}
 .fine{font-size:12px;color:var(--muted);margin-top:10px;max-width:70ch}
+.lock{opacity:.75}
+button.reveal{all:unset;cursor:pointer;font-family:var(--f-mono);font-size:11px;color:var(--muted);border-bottom:1px dotted var(--line);overflow-wrap:anywhere}
+button.reveal:hover,button.reveal[aria-expanded="true"]{color:var(--gold-hi)}
+button.reveal:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .fineprint p{margin:8px 0 0;max-width:80ch}
 details.owner summary{cursor:pointer;list-style:none}
 details.owner summary::-webkit-details-marker{display:none}
@@ -195,7 +199,7 @@ label{display:block;font-size:12px;color:var(--muted);margin:12px 0 6px}
     <section class="panel">
       <h2>The vault</h2>
       <p class="muted" style="margin:8px 0 4px">Agent wallet</p><div class="addr" id="agentAddr">-</div>
-      <p class="muted" style="margin:10px 0 4px">Profit goes only to</p><div class="addr" id="profitAddr">-</div>
+      <p class="fine lock">Profit is swept to one locked address <button type="button" class="reveal" id="profitAddr" aria-expanded="false" title="Show the full address">-</button></p>
       <h2 style="margin-top:18px">Profit sent</h2>
       <div class="scroll"><table><thead><tr><th>Time</th><th>SOL</th><th>Tx</th></tr></thead><tbody id="sweeps"></tbody></table></div>
     </section>
@@ -324,7 +328,8 @@ function render() {
   $('sDonated').textContent = s.donations ? sol(s.donations.totalSol) : '-';
   $('sRounds').textContent = b.rounds ?? '-';
   $('agentAddr').innerHTML = s.agentWallet ? `<a href="https://solscan.io/account/${esc(s.agentWallet)}" target="_blank" rel="noopener">${esc(s.agentWallet)}</a>` : 'none set';
-  $('profitAddr').textContent = s.profitAddress;
+  const pa = $('profitAddr'), full = pa.getAttribute('aria-expanded') === 'true';
+  pa.textContent = full ? s.profitAddress : `${s.profitAddress.slice(0, 4)}…${s.profitAddress.slice(-4)}`;
   renderDonations();
 
   const toks = s.market?.tokens || [];
@@ -387,6 +392,9 @@ $('liveSwitch').onclick = async () => {
   catch (e) { say('liveMsg', e.message, 'err'); }
   load();
 };
+
+// The profit address stays tucked away: short form by default, full on click.
+$('profitAddr').onclick = () => { const pa = $('profitAddr'); pa.setAttribute('aria-expanded', String(pa.getAttribute('aria-expanded') !== 'true')); pa.title = pa.getAttribute('aria-expanded') === 'true' ? 'Hide the full address' : 'Show the full address'; if (state) render(); };
 
 $('btnKill').onclick = async () => {
   if (!await ask({ title: 'Use the kill switch?', ok: 'Close all and stop', body: '<p>Every position is closed, trading stops, and any profit is swept.</p>' })) return;
