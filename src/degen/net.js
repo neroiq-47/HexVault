@@ -53,7 +53,10 @@ export const SOURCES = {
   // GeckoTerminal answered 429 at 15/min in production, and the agent desk pulls its 15m candles from the same IP,
   // so the scanner stays at 8/min. A 429 pauses every GeckoTerminal call for a minute, discovery included.
   geckoterminal: { perMinute: 8, label: 'GeckoTerminal' },
+  // Backup for GeckoTerminal when COINGECKO_API_KEY is set; the free demo plan allows 30/min.
+  coingecko: { perMinute: 25, label: 'CoinGecko (backup)' },
   rpc: { perMinute: 200, label: 'Solana RPC' },
+  rpcBackup: { perMinute: 100, label: 'Solana RPC (backup)' },
   reddit: { perMinute: 20, label: 'Reddit' },
   fourchan: { perMinute: 20, label: '4chan /biz/' },
   rugcheck: { perMinute: 15, label: 'RugCheck' },
@@ -85,11 +88,19 @@ export function createNet({ fetchImpl = fetch, now = Date.now, sleep, sources = 
       }
     });
   }
-  // Solana JSON-RPC over the same budget and cache.
-  async function rpc(url, method, params, opts = {}) {
-    return json('rpc', url, { ...opts, key: opts.key || `rpc:${method}:${JSON.stringify(params)}`,
-      init: { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) },
-      parse: r => { if (r.error) throw new Error(`RPC ${method}: ${r.error.message || r.error.code}`); return (opts.parse || (x => x))(r.result); } });
+  // Solana JSON-RPC over the same budget and cache. Given a list of URLs, a failure or an empty budget
+  // on one moves to the next; the backups share their own budget so they never starve the primary.
+  async function rpc(urls, method, params, opts = {}) {
+    const list = [].concat(urls).filter(Boolean);
+    let last;
+    for (const [i, url] of list.entries()) {
+      try {
+        return await json(i ? 'rpcBackup' : 'rpc', url, { ...opts, key: opts.key || `rpc:${method}:${JSON.stringify(params)}`,
+          init: { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }) },
+          parse: r => { if (r.error) throw new Error(`RPC ${method}: ${r.error.message || r.error.code}`); return (opts.parse || (x => x))(r.result); } });
+      } catch (e) { last = e; }
+    }
+    throw last;
   }
   return { json, rpc, cache, health, limiters };
 }

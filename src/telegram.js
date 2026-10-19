@@ -3,6 +3,7 @@
 // (through Fragment, after Telegram's hold), so the bot must belong to the account that should be paid.
 // SOL donations go straight to the project wallet: the bot only links to it and never holds a key.
 import { readFileSync } from 'node:fs';
+import { jupiterPrices } from './backups.js';
 
 const API = 'https://api.telegram.org';
 const SOL_MINT = 'So11111111111111111111111111111111111111112';
@@ -129,8 +130,13 @@ export function createTelegram({ config, fetchImpl = fetch, now = Date.now, log 
       const res = await fetchImpl(`https://api.dexscreener.com/tokens/v1/solana/${SOL_MINT}`, { signal: AbortSignal.timeout(10000) });
       const pairs = await res.json();
       const best = (Array.isArray(pairs) ? pairs : []).filter(p => p?.baseToken?.address === SOL_MINT && Number(p.priceUsd) > 0).sort((a, b) => (b.liquidity?.usd || 0) - (a.liquidity?.usd || 0))[0];
-      if (best) { s.solUsd = Number(best.priceUsd); s.solAt = now(); }
-    } catch (e) { log('warn', 'sol price failed', { message: String(e.message || e) }); }
+      if (!best) throw new Error('no SOL pair');
+      s.solUsd = Number(best.priceUsd); s.solAt = now();
+    } catch (e) {
+      // Jupiter's Price API is the backup, so the donate limits still follow the live price.
+      try { const p = (await jupiterPrices([SOL_MINT], { fetchImpl }))[SOL_MINT]; if (p) { s.solUsd = p.price; s.solAt = now(); } else throw new Error('no SOL price'); }
+      catch (e2) { log('warn', 'sol price failed', { message: `${e.message || e}; backup ${e2.message || e2}` }); }
+    }
     return s.solUsd;
   }
   const limits = async () => donationLimits(await solPrice(), config);
