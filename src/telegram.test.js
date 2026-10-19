@@ -28,7 +28,7 @@ test('config defaults to the Pumpflip channel, the owner handle and the $25 to 1
   assert.equal(c.donateMinUsd, 25); assert.equal(c.donateMaxSol, 10);
   assert.equal(cfg({ TG_DONATE_MAX_SOL: '50' }).donateMaxSol, 10);
   assert.equal(telegramConfig({}, {}).enabled, false);
-  assert.equal(cfg({ RAILWAY_PUBLIC_DOMAIN: 'hexvault.up.railway.app' }).publicUrl, 'https://hexvault.up.railway.app');
+  assert.equal(cfg({ RAILWAY_PUBLIC_DOMAIN: 'hexsyndicate.up.railway.app' }).publicUrl, 'https://hexsyndicate.up.railway.app');
 });
 
 test('donation limits turn $25 into SOL at the live price and cap at 10 SOL', () => {
@@ -122,4 +122,11 @@ test('donate replies with the wallet and the live range', async () => {
   assert.match(msg.text, /5qmsMSPXoTWDfsEDLoo15ywoPLSiKB7zqRGR9dSVfQTA/);
   assert.deepEqual(msg.reply_markup.inline_keyboard[0].map(b => b.url), ['https://hex.example/donate?amount=0.125', 'https://hex.example/donate?amount=1', 'https://hex.example/donate?amount=5', 'https://hex.example/donate?amount=10']);
   assert.equal(esc('<b>'), '&lt;b&gt;');
+});
+
+test('welcome links new members to the Desk', async () => {
+  const api = fakeApi({ sendMessage: { message_id: 1 } });
+  const tg = createTelegram({ config: cfg({ RAILWAY_PUBLIC_DOMAIN: 'hexsyndicate.up.railway.app' }), fetchImpl: api.fetchImpl, sleep: async () => {} });
+  await tg.handleUpdate({ message: { chat: { id: -1, type: 'supergroup' }, new_chat_members: [{ id: 7, first_name: 'Ana' }] } });
+  assert.match(api.calls.find(c => c.method === 'sendMessage').body.text, /Ana[\s\S]*\nThe Desk: https:\/\/hexsyndicate\.up\.railway\.app$/);
 });
