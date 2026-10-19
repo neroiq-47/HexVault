@@ -75,34 +75,34 @@ export function solanaPayUrl(address, amount, label = 'HexSyndicate', message = 
   return `solana:${address}?amount=${amount}&label=${encodeURIComponent(label)}&message=${encodeURIComponent(message)}`;
 }
 
+// One fact per line, biggest things first, so a call reads in a couple of seconds on a phone.
 export function callCaption(row, { tone = 'chill', pick = 0 } = {}) {
   const heads = (TONES[tone] || TONES.chill).heads;
   const f = row.f || {}, z = row.zones, sec = row.security || {};
-  const buys = f.buyRatio5m != null ? `Buys ${Math.round(f.buyRatio5m * 100)}% of 5m flow` : null;
+  const rug = sec.status === 'pass' ? '✅ passed' : sec.status === 'fail' ? '❌ failed' : '⚠️ partial';
   const lines = [
-    `<b>${esc(heads[pick % heads.length])}</b>`,
+    `<i>${esc(heads[pick % heads.length])}</i>`,
     '',
     `<b>$${esc(row.sym)}</b>${row.name ? ` · ${esc(row.name)}` : ''}`,
-    `Score <b>${row.score}</b>${row.grade ? ` (${esc(row.grade)})` : ''}${row.presets?.length ? ` · ${esc(row.presets.join(', '))}` : ''}`,
-    row.signals?.length ? `Signals: ${esc(row.signals.slice(0, 4).join(', '))}` : null,
-    `MC ${usd(f.mcap)} · Liq ${usd(f.liq)} · Vol 5m ${usd(f.vol5m)}`,
-    [`Age ${age(f.ageMin)}`, buys, f.holders ? `${f.holders} holders` : null].filter(Boolean).join(' · '),
-    z ? `Entry ${z.entry.map(price).join(' to ')} · Stop ${price(z.invalidation)} · Targets ${z.targets.map(price).join(' / ')}` : `Price ${price(f.price)}`,
-    `Rug check: ${sec.status === 'pass' ? 'passed' : esc(sec.status || 'unchecked')}${sec.warnings?.length ? ` (${sec.warnings.length} warning${sec.warnings.length > 1 ? 's' : ''})` : ''}`,
+    `Score <b>${row.score}/100</b> · Rug check ${rug}`,
     '',
+    `💰 MC <b>${usd(f.mcap)}</b>`,
+    `💧 Liquidity <b>${usd(f.liq)}</b>`,
+    `⏱ Age <b>${age(f.ageMin)}</b>`,
+    '',
+    ...(z ? [`🎯 Entry <b>${z.entry.map(price).join(' – ')}</b>`, `🛑 Stop <b>${price(z.invalidation)}</b>`, `✅ Target <b>${price(z.targets[0])}</b>`] : [`💵 Price <b>${price(f.price)}</b>`]),
+    '',
+    '📋 CA (tap to copy)',
     `<code>${esc(row.mint)}</code>`,
     '',
-    '<i>Not financial advice. Degen Radar paper-tests every call and can be wrong.</i>',
+    '<i>Not financial advice. DYOR.</i>',
   ];
-  return lines.filter(l => l != null).join('\n').slice(0, 1024);
+  return lines.join('\n').slice(0, 1024);
 }
 
 export function callButtons(row, { botUsername } = {}) {
-  const kb = [
-    [{ text: '🟢 Buy on Jupiter', url: `https://jup.ag/swap/SOL-${row.mint}` }, { text: '📈 Chart', url: `https://dexscreener.com/solana/${row.mint}` }],
-    [{ text: '🔎 GMGN', url: `https://gmgn.ai/sol/token/${row.mint}` }, ...(row.mint.endsWith('pump') ? [{ text: '💊 pump.fun', url: `https://pump.fun/coin/${row.mint}` }] : [])],
-  ];
-  if (botUsername) kb.push([{ text: '⭐ Tip in Stars', url: `https://t.me/${botUsername}?start=tip` }, { text: '💜 Donate SOL', url: `https://t.me/${botUsername}?start=donate` }]);
+  const kb = [[{ text: '🟢 Buy', url: `https://jup.ag/swap/SOL-${row.mint}` }, { text: '📈 Chart', url: `https://dexscreener.com/solana/${row.mint}` }]];
+  if (botUsername) kb.push([{ text: '⭐ Tip', url: `https://t.me/${botUsername}?start=tip` }, { text: '💜 Donate', url: `https://t.me/${botUsername}?start=donate` }]);
   return { inline_keyboard: kb };
 }
 
