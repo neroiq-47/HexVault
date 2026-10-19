@@ -34,3 +34,16 @@ test('halted book refuses buys', () => {
   const book = newBook(100, 100); book.halted = true;
   assert.equal(applyLimits({ proposals: [{ token: 'SOL', action: 'buy', sizePct: 5 }], book, market, level: 'high' }).approved.length, 0);
 });
+
+test('dust sells: trims under $1 are skipped, small remainders are closed out', async () => {
+  const { applyLimits } = await import('./risk.js');
+  const market = { tokens: [{ sym: 'BONK', price: 1, liq: 1e6 }] };
+  const mk = qty => ({ cash: 0, pos: { BONK: { qty, cost: qty } }, dayStartEquity: qty });
+  const trim = applyLimits({ proposals: [{ token: 'BONK', action: 'sell', sizePct: 1 }], book: mk(10), market, level: 'med' });
+  assert.equal(trim.approved.length, 0);
+  assert.match(trim.notes[0], /trim under \$1/);
+  const half = applyLimits({ proposals: [{ token: 'BONK', action: 'sell', sizePct: 50 }], book: mk(1.5), market, level: 'med' });
+  assert.equal(half.approved[0].frac, 1);
+  const ok = applyLimits({ proposals: [{ token: 'BONK', action: 'sell', sizePct: 50 }], book: mk(10), market, level: 'med' });
+  assert.equal(ok.approved[0].frac, 0.5);
+});
