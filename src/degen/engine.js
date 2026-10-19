@@ -24,7 +24,7 @@ export function degenConfig(env = process.env, base = {}) {
     wallets, alertScore: Number(env.DEGEN_ALERT_SCORE) || 70,
     paperUsd: Number(env.DEGEN_PAPER_USD) || 1000, paperSizeUsd: Number(env.DEGEN_PAPER_SIZE_USD) || 100, paperMaxPos: Number(env.DEGEN_PAPER_MAX_POSITIONS) || 5,
     securityPerCycle: Number(env.DEGEN_SECURITY_PER_CYCLE) || 8,
-    rugcheck: (env.DEGEN_RUGCHECK || 'on').trim() !== 'off',
+    rugcheck: (env.DEGEN_RUGCHECK || 'off').trim() === 'on',
     reddit: { clientId: (env.REDDIT_CLIENT_ID || '').trim(), clientSecret: (env.REDDIT_CLIENT_SECRET || '').trim() },
     discordWebhook: (env.DEGEN_DISCORD_WEBHOOK || '').trim(),
     dataPath: env.DEGEN_DATA_PATH || './data/degen.json',
@@ -129,9 +129,11 @@ export function createDegen({ config, fetchImpl = fetch, now = Date.now, log = (
     const queue = [...active.filter(x => priority.includes(x.mint)), ...active.filter(x => !priority.includes(x.mint)).sort((a, b) => (b.vol?.m5 ?? 0) - (a.vol?.m5 ?? 0))].filter(stale);
     const secErrors = [];
     for (const tok of queue.slice(0, config.securityPerCycle + priority.length)) await enrich(tok, secErrors);
-    const realErr = secErrors.filter(e => !/budget/.test(e));
+    // A 404 from token info just means GeckoTerminal has not indexed a brand-new token yet.
+    const realErr = secErrors.filter(e => !/budget|HTTP 404/.test(e));
     if (realErr.length) errors.push(`security: ${realErr.length} lookups failed (${realErr[0]})`);
-    if (secErrors.length > realErr.length) errors.push(`security: ${secErrors.length - realErr.length} lookups deferred to stay inside free rate limits`);
+    const deferred = secErrors.filter(e => /budget/.test(e)).length;
+    if (deferred) errors.push(`security: ${deferred} lookups deferred to stay inside free rate limits`);
 
     // 4. Social and wallets on slower clocks.
     if (now() - s.lastSocial >= 5 * MIN) await refreshSocial(tokens, errors);

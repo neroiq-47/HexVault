@@ -102,10 +102,10 @@ Logs are one JSON object per line with a `level` field.
 
 | Need | Source (free) | Notes |
 |---|---|---|
-| New launches, trending pairs, unique buyers/sellers, 5m candles, holder count, dev wallet | GeckoTerminal public API | about 25 calls/min budget |
+| New launches, trending pairs, unique buyers/sellers, 5m candles, holder count, dev wallet | GeckoTerminal public API | about 15 calls/min budget |
 | Prices, liquidity, volume, socials, paid boosts and profiles | DexScreener public API | about 55 calls/min budget |
 | Mint and freeze authority, Token-2022 extensions, top holders, wallet swaps | Solana JSON-RPC (`DEGEN_RPC_URL`, defaults to the public mainnet RPC) | a free Helius or similar key helps under load |
-| Extra risk flags | RugCheck public summary | optional; skipped when it does not answer |
+| Extra risk flags | RugCheck public summary | off by default (`DEGEN_RUGCHECK=on`); skipped when it does not answer |
 | Social posts | Reddit public JSON (r/solana, r/SolanaMemeCoins, r/memecoins, r/CryptoMoonShots) and the 4chan `/biz/` catalog | Reddit often blocks cloud IPs; add a free Reddit app's `REDDIT_CLIENT_ID` and `REDDIT_CLIENT_SECRET` |
 | X and Telegram | none | no free API exists, so the dashboard marks them unavailable instead of inventing sentiment |
 
@@ -131,7 +131,7 @@ Backtests replay the snapshots the scanner records (about 8 hours for up to 400 
 | `DEGEN_ALERT_SCORE` | `70` | |
 | `DEGEN_PAPER_USD`, `DEGEN_PAPER_SIZE_USD`, `DEGEN_PAPER_MAX_POSITIONS` | `1000`, `100`, `5` | |
 | `DEGEN_SECURITY_PER_CYCLE` | `8` | new tokens security-checked per scan |
-| `DEGEN_RUGCHECK` | `on` | |
+| `DEGEN_RUGCHECK` | `off` | its public API was not reachable from Railway at launch |
 | `DEGEN_DISCORD_WEBHOOK` | empty | optional free alert delivery |
 | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` | empty | optional, free |
 | `OLLAMA_URL`, `OLLAMA_MODEL` | empty, `llama3.2` | optional local model |
