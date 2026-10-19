@@ -104,7 +104,7 @@ export function socialMomentum(mentions = [], { now = Date.now(), available = tr
     suspicious: botShare >= 0.5 ? 'Mostly bot-like or repeated promotion' : null };
 }
 
-const STOP = new Set('the a an and or of to in on for with is are was be this that it its i you we they my your our new coin token sol solana crypto just get got can will now like what when who how why all any about from at by up out so if not no do does did dont has have had me us them their there here more most less over into than then too very one two first last day today time next pump fun pumpfun launch launched official real'.split(' '));
+const STOP = new Set('the a an and or of to in on for with is are was be this that it its i you we they my your our new coin token sol solana crypto just get got can will now like what when who how why all any about from at by up out so if not no do does did dont has have had me us them their there here more most less over into than then too very one two first last day today time next pump fun pumpfun launch launched official real com www http https same thread anon post posts people still would could should really think know want need going make much even only also been being because back good well https'.split(' '));
 
 // Narratives: words that suddenly show up in new token names and posts compared with the previous few hours.
 export function narratives({ tokens = [], posts = [], now = Date.now(), windowMin = 60 }) {
