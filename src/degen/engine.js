@@ -31,7 +31,7 @@ export function degenConfig(env = process.env, base = {}) {
   };
 }
 
-export function createDegen({ config, fetchImpl = fetch, now = Date.now, log = () => {}, brain = null, isOnCurve, sleep, saved = null }) {
+export function createDegen({ config, fetchImpl = fetch, now = Date.now, log = () => {}, brain = null, isOnCurve, sleep, saved = null, onCall = null }) {
   const net = createNet({ fetchImpl, now, sleep });
   const sources = createSources({ net, rpcUrl: config.rpcUrl, reddit: config.reddit, isOnCurve });
   const history = createHistory();
@@ -177,6 +177,7 @@ export function createDegen({ config, fetchImpl = fetch, now = Date.now, log = (
         const a = { id: `${r.mint}:${t}`, at: t, kind: 'opportunity', mint: r.mint, sym: r.sym, score: r.score, presets: r.presets, signals: r.signals,
           title: `${r.sym} scored ${r.score} (${r.presets.join(', ')})`, body: `${r.signals.join(', ')}. Entry ${r.zones?.entry.join(' to ')}, invalidation ${r.zones?.invalidation}, targets ${r.zones?.targets.join(' / ')}.` };
         pushAlert(a); fresh.push(a); s.lastAlertAt[r.mint] = { at: t, score: r.score };
+        if (onCall) try { onCall(a, r); } catch (e) { log('warn', 'call hook failed', { message: String(e.message || e) }); }
       }
       if ((s.watchlist.includes(r.mint) || s.book.pos[r.mint]) && r.security.status === 'fail' && s.lastAlertAt[`risk:${r.mint}`]?.status !== 'fail') {
         pushAlert({ id: `risk:${r.mint}:${t}`, at: t, kind: 'risk', mint: r.mint, sym: r.sym, title: `Rug warning on ${r.sym}`, body: `Failed: ${r.security.fails.join(', ')}.` });
