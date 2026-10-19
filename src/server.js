@@ -14,6 +14,9 @@ import { loadState, saveState } from './store.js';
 import { log } from './log.js';
 import { verifyDonation } from './donations.js';
 import { DONATION_MIN_SOL, DONATION_MAX_SOL } from './config.js';
+import { PublicKey } from '@solana/web3.js';
+import { createDegen, degenConfig } from './degen/engine.js';
+import { createDegenRoutes } from './degen/http.js';
 
 const SITE = readFileSync(new URL('../public/index.html', import.meta.url));
 
@@ -44,10 +47,11 @@ function authorised(req, secret) {
   return got.length === want.length && timingSafeEqual(got, want);
 }
 
-export function createServer({ desk, config, wallet, persist }) {
+export function createServer({ desk, config, wallet, persist, degenRoutes }) {
   return http.createServer(async (req, res) => {
     const send = (code, body) => { res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(body)); };
     try {
+      if (degenRoutes && await degenRoutes.handle(req, res, send)) return;
       if (req.method === 'GET' && (req.url === '/' || req.url === '/index.html')) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'x-frame-options': 'DENY', 'referrer-policy': 'no-referrer' }); return res.end(SITE); }
       if (req.method === 'GET' && req.url === '/health') return send(200, { ok: true });
       if (req.method === 'GET' && req.url === '/api/state') return send(200, publicState(desk, config, wallet));
@@ -102,7 +106,30 @@ async function main() {
   if (saved?.deposits) desk.state.deposits = saved.deposits;
   const persist = () => saveState(config.dataPath, { book: desk.state.book, liveOn: desk.state.mode === 'live', deposits: desk.state.deposits });
 
-  const server = createServer({ desk, config, wallet, persist });
+  // Axiom Degen scanner: paper trading and alerts only, on its own loop and its own state file.
+  const dcfg = degenConfig(process.env, config);
+  let degenRoutes = null;
+  if (dcfg.enabled) {
+    const isOnCurve = a => { try { return PublicKey.isOnCurve(new PublicKey(a).toBytes()); } catch { return true; } };
+    const degen = createDegen({ config: dcfg, log, brain, isOnCurve, saved: await loadState(dcfg.dataPath).catch(() => null) });
+    const persistDegen = () => saveState(dcfg.dataPath, degen.toJSON());
+    degenRoutes = createDegenRoutes({ degen, authorised: req => authorised(req, config.adminSecret), readJson, persist: persistDegen });
+    let busy = false;
+    const scan = async () => {
+      if (busy) return; busy = true;
+      try {
+        const c = await degen.cycle();
+        degenRoutes.broadcast(c);
+        if (degen.state.cycles % 5 === 1) await persistDegen();
+        log('info', 'degen scan', { ms: c.ms, tokens: c.tokens, checked: c.checked, tradable: c.tradable, errors: c.errors.length });
+      } catch (e) { log('error', 'degen scan failed', { message: String(e.message || e) }); }
+      finally { busy = false; }
+    };
+    setTimeout(scan, 5000);
+    setInterval(scan, dcfg.scanMs).unref();
+  }
+
+  const server = createServer({ desk, config, wallet, persist, degenRoutes });
   server.listen(config.port, () => log('info', 'listening', { port: config.port, mode, armed, cluster: config.cluster, wallet: wallet ? keypair.publicKey.toBase58() : null, brain: brain ? brain.providers.join(' > ') : 'rules' }));
 
   let running = false;
