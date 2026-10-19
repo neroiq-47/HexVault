@@ -1,4 +1,4 @@
-// Axiom Degen engine: one scan loop that discovers pairs, gates them through the anti-rug engine,
+// Degen Radar engine: one scan loop that discovers pairs, gates them through the anti-rug engine,
 // adds social and smart-money context, scores them, raises alerts and paper-trades the strongest setups.
 import { createNet } from './net.js';
 import { createSources, MAINNET_RPC } from './sources.js';
@@ -56,7 +56,7 @@ export function createDegen({ config, fetchImpl = fetch, now = Date.now, log = (
     if (!config.discordWebhook) return;
     try {
       await fetchImpl(config.discordWebhook, { method: 'POST', headers: { 'content-type': 'application/json' }, signal: AbortSignal.timeout(10000),
-        body: JSON.stringify({ username: 'HexVault Degen', content: `**${alert.title}**\n${alert.body}\nhttps://dexscreener.com/solana/${alert.mint} (paper trading only)`.slice(0, 1900) }) });
+        body: JSON.stringify({ username: 'HexSyndicate Degen Radar', content: `**${alert.title}**\n${alert.body}\nhttps://dexscreener.com/solana/${alert.mint} (paper trading only)`.slice(0, 1900) }) });
     } catch (e) { log('warn', 'discord alert failed', { message: String(e.message || e) }); }
   }
   function pushAlert(a) {

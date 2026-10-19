@@ -1,4 +1,6 @@
-# HexVault
+# HexSyndicate
+
+*Formerly HexVault. Brand, palette and voice are in [BRAND.md](BRAND.md).*
 
 Four cooperating AI agents (Scout, Analyst, Risk Manager, Trader) watch live Solana prices and trade from an agent wallet, sweeping profit to `5qmsMSPXoTWDfsEDLoo15ywoPLSiKB7zqRGR9dSVfQTA`.
 
@@ -41,7 +43,7 @@ npm start                 # http://127.0.0.1:3000/api/state
 
 ## Live switch
 
-The bot serves the HexVault console at `/` on its Railway domain. It shows the agents, positions, trades and sweeps, and holds a Live on/off switch.
+The bot serves the HexSyndicate Desk at `/` on its Railway domain. It shows the agents, positions, trades and sweeps, and holds a Live on/off switch.
 
 - `TRADING_MODE=live` only **arms** the switch. The bot still starts in shadow mode until someone turns the switch on.
 - **On** needs the admin secret, starts a fresh book from the agent wallet, and refuses if the wallet holds less than `FLOAT_SOL` minus the drawdown limit.
@@ -67,7 +69,7 @@ With `DONATIONS=on`, the console shows a "Support the agent team" panel. Visitor
 | `POST /api/resume` | Resume trading after a kill. Same header |
 | `POST /api/live` | Live switch: body `{"on": true}` or `{"on": false}`. Same header |
 | `GET /api/blockhash`, `POST /api/donation` | Donation flow, only with `DONATIONS=on`. The POST takes `{"signature"}` and checks it on chain |
-| `GET /` | The HexVault console |
+| `GET /` | The HexSyndicate Desk |
 
 ## Railway
 
@@ -94,11 +96,11 @@ Logs are one JSON object per line with a `level` field.
 
 ## Dashboard
 
-`dashboard/index.html` is the HexVault dashboard: a single page that paper-trades in the browser with the same four agents and limits. It holds no keys. Open it in a browser to see the DexScreener snapshot; live prices and Claude-run agents work when it is opened as a claude.ai artifact.
+`dashboard/index.html` is the HexSyndicate dashboard: a single page that paper-trades in the browser with the same four agents and limits. It holds no keys. Open it in a browser to see the DexScreener snapshot; live prices and Claude-run agents work when it is opened as a claude.ai artifact.
 
-## Axiom Degen scanner
+## Degen Radar
 
-`/degen` is a memecoin scanner and social sentiment agent that runs inside the same service on its own loop (`src/degen/`). It only paper-trades and raises alerts; it never signs or sends a transaction. Every core feature runs on free, keyless sources.
+`/degen` (Degen Radar, formerly Axiom Degen) is a memecoin scanner and social sentiment agent that runs inside the same service on its own loop (`src/degen/`). It only paper-trades and raises alerts; it never signs or sends a transaction. Every core feature runs on free, keyless sources.
 
 | Need | Source (free) | Notes |
 |---|---|---|

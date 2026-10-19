@@ -106,7 +106,7 @@ async function main() {
   if (saved?.deposits) desk.state.deposits = saved.deposits;
   const persist = () => saveState(config.dataPath, { book: desk.state.book, liveOn: desk.state.mode === 'live', deposits: desk.state.deposits });
 
-  // Axiom Degen scanner: paper trading and alerts only, on its own loop and its own state file.
+  // Degen Radar scanner: paper trading and alerts only, on its own loop and its own state file.
   const dcfg = degenConfig(process.env, config);
   let degenRoutes = null;
   if (dcfg.enabled) {
